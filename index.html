@@ -1703,9 +1703,39 @@ Respond naturally as if having a spoken conversation.`;
       return recommendedVoices.some(name => voice.name.includes(name));
     }
 
+    // Get the default voice using the same logic as processQueue
+    function getDefaultVoice(voices) {
+      const preferredLocal = [
+        'Samantha (Enhanced)', 'Ava (Premium)', 'Zoe (Premium)', 'Tom (Enhanced)',
+        'Serena (Premium)', 'Daniel (Enhanced)', 'Karen (Enhanced)', 'Alex',
+        'Samantha', 'Daniel', 'Karen', 'Moira', 'Tessa'
+      ];
+
+      for (const name of preferredLocal) {
+        const voice = voices.find(v => v.name.includes(name) && v.localService !== false);
+        if (voice) return voice;
+      }
+
+      // Fallback to any English local voice
+      let voice = voices.find(v => v.lang.startsWith('en') && v.localService !== false);
+      if (voice) return voice;
+
+      // Last resort: any English voice
+      return voices.find(v => v.lang.startsWith('en'));
+    }
+
     function populateVoiceList() {
       const voices = speechSynthesis.getVoices();
       let englishVoices = voices.filter(v => v.lang.startsWith('en'));
+
+      // If no voice selected yet, determine and save the default
+      if (!selectedVoiceName && englishVoices.length > 0) {
+        const defaultVoice = getDefaultVoice(englishVoices);
+        if (defaultVoice) {
+          selectedVoiceName = defaultVoice.name;
+          localStorage.setItem('selectedVoice', defaultVoice.name);
+        }
+      }
 
       // Filter out cloud voices if toggle is off
       if (!cloudVoicesEnabled) {
