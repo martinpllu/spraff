@@ -628,6 +628,85 @@
       color: var(--fg);
     }
 
+    .voice-cloud-badge {
+      font-size: 0.55rem;
+      color: var(--fg-muted);
+      background: var(--bg);
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      margin-left: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Cloud toggle */
+    .cloud-toggle {
+      padding: 0 0.5rem 1rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 0.75rem;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      gap: 1rem;
+    }
+
+    .toggle-label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .toggle-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--fg);
+    }
+
+    .toggle-desc {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--fg-muted);
+    }
+
+    .toggle-row input {
+      display: none;
+    }
+
+    .toggle-switch {
+      width: 36px;
+      height: 20px;
+      background: var(--border);
+      border-radius: 10px;
+      position: relative;
+      transition: background 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: var(--surface);
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+    }
+
+    .toggle-row input:checked + .toggle-switch {
+      background: var(--accent);
+    }
+
+    .toggle-row input:checked + .toggle-switch::after {
+      transform: translateX(16px);
+    }
+
     /* Error Toast */
     .error-toast {
       position: fixed;
@@ -694,6 +773,16 @@
         <button class="modal-close" id="modalClose">&times;</button>
       </div>
       <div class="modal-body">
+        <div class="cloud-toggle">
+          <label class="toggle-row">
+            <span class="toggle-label">
+              <span class="toggle-title">Cloud voices</span>
+              <span class="toggle-desc">Higher quality, but text is sent to Google</span>
+            </span>
+            <input type="checkbox" id="cloudVoicesToggle">
+            <span class="toggle-switch"></span>
+          </label>
+        </div>
         <div class="voice-list" id="voiceList"></div>
       </div>
     </div>
@@ -809,6 +898,7 @@
     let audioStream = null;
     let selectedVoiceName = localStorage.getItem('selectedVoice') || null;
     let webSearchEnabled = localStorage.getItem('webSearchEnabled') === 'true';
+    let cloudVoicesEnabled = localStorage.getItem('cloudVoicesEnabled') === 'true';
     let speechQueue = [];
     let isSpeaking = false;
     let shouldStopSpeaking = false;
@@ -1421,7 +1511,6 @@ Respond naturally as if having a spoken conversation.`;
 
       // Select voice
       const voices = speechSynthesis.getVoices();
-      console.log('Available voices:', voices.length, voices.map(v => v.name));
       let voice = null;
 
       if (selectedVoiceName) {
@@ -1429,19 +1518,32 @@ Respond naturally as if having a spoken conversation.`;
       }
 
       if (!voice) {
-        const preferred = [
-          'Google UK English Female', 'Google UK English Male', 'Google US English',
-          'Ava (Premium)', 'Zoe (Premium)', 'Samantha', 'Karen'
+        // Prefer on-device voices for privacy (localService: true)
+        // Best quality local voices on macOS/iOS
+        const preferredLocal = [
+          'Samantha (Enhanced)', 'Ava (Premium)', 'Zoe (Premium)', 'Tom (Enhanced)',
+          'Serena (Premium)', 'Daniel (Enhanced)', 'Karen (Enhanced)', 'Alex',
+          'Samantha', 'Daniel', 'Karen', 'Moira', 'Tessa'
         ];
-        for (const name of preferred) {
-          voice = voices.find(v => v.name.includes(name));
+
+        // Try local voices first
+        for (const name of preferredLocal) {
+          voice = voices.find(v => v.name.includes(name) && v.localService !== false);
           if (voice) break;
         }
-        if (!voice) voice = voices.find(v => v.lang.startsWith('en'));
+
+        // Fallback to any English local voice
+        if (!voice) {
+          voice = voices.find(v => v.lang.startsWith('en') && v.localService !== false);
+        }
+
+        // Last resort: any English voice (including cloud)
+        if (!voice) {
+          voice = voices.find(v => v.lang.startsWith('en'));
+        }
       }
 
       if (voice) utterance.voice = voice;
-      console.log('Speaking with voice:', voice?.name || 'default', 'text:', text.substring(0, 50));
 
       // iOS Safari fix: onend often doesn't fire, use timeout as fallback
       let ended = false;
@@ -1479,15 +1581,26 @@ Respond naturally as if having a spoken conversation.`;
     }
 
     // ============ Voice Settings ============
+    function isCloudVoice(voice) {
+      return voice.localService === false;
+    }
+
     function populateVoiceList() {
       const voices = speechSynthesis.getVoices();
-      const englishVoices = voices.filter(v => v.lang.startsWith('en'));
+      let englishVoices = voices.filter(v => v.lang.startsWith('en'));
 
+      // Filter out cloud voices if toggle is off
+      if (!cloudVoicesEnabled) {
+        englishVoices = englishVoices.filter(v => !isCloudVoice(v));
+      }
+
+      // Sort: Premium/Enhanced first, then alphabetical
       englishVoices.sort((a, b) => {
-        const aGoogle = a.name.includes('Google');
-        const bGoogle = b.name.includes('Google');
-        if (aGoogle && !bGoogle) return -1;
-        if (!aGoogle && bGoogle) return 1;
+        const aCloud = isCloudVoice(a);
+        const bCloud = isCloudVoice(b);
+        // Cloud voices at the end when enabled
+        if (aCloud && !bCloud) return 1;
+        if (!aCloud && bCloud) return -1;
         const aPremium = a.name.includes('Premium') || a.name.includes('Enhanced');
         const bPremium = b.name.includes('Premium') || b.name.includes('Enhanced');
         if (aPremium && !bPremium) return -1;
@@ -1497,14 +1610,19 @@ Respond naturally as if having a spoken conversation.`;
 
       voiceList.innerHTML = '';
 
+      // Update toggle state
+      const toggle = document.getElementById('cloudVoicesToggle');
+      if (toggle) toggle.checked = cloudVoicesEnabled;
+
       englishVoices.forEach(voice => {
         const isSelected = selectedVoiceName === voice.name;
+        const isCloud = isCloudVoice(voice);
         const item = document.createElement('div');
         item.className = `voice-item${isSelected ? ' selected' : ''}`;
         item.innerHTML = `
           <div class="voice-radio"></div>
           <div class="voice-info">
-            <div class="voice-name">${voice.name}</div>
+            <div class="voice-name">${voice.name}${isCloud ? '<span class="voice-cloud-badge">cloud</span>' : ''}</div>
             <div class="voice-lang">${voice.lang}</div>
           </div>
           <button class="voice-preview">Preview</button>
@@ -1622,6 +1740,22 @@ Respond naturally as if having a spoken conversation.`;
       modalClose.addEventListener('click', closeVoiceSettings);
       voiceModal.addEventListener('click', (e) => {
         if (e.target === voiceModal) closeVoiceSettings();
+      });
+
+      // Cloud voices toggle
+      document.getElementById('cloudVoicesToggle').addEventListener('change', (e) => {
+        cloudVoicesEnabled = e.target.checked;
+        localStorage.setItem('cloudVoicesEnabled', cloudVoicesEnabled);
+        // If turning off cloud voices and current selection is a cloud voice, clear it
+        if (!cloudVoicesEnabled && selectedVoiceName) {
+          const voices = speechSynthesis.getVoices();
+          const currentVoice = voices.find(v => v.name === selectedVoiceName);
+          if (currentVoice && isCloudVoice(currentVoice)) {
+            selectedVoiceName = null;
+            localStorage.removeItem('selectedVoice');
+          }
+        }
+        populateVoiceList();
       });
 
       // Load voices
