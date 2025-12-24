@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Speak</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f0e8;
+      --bg-warm: #ebe5db;
+      --fg: #2d2a24;
+      --fg-muted: #7a756b;
+      --accent: #c45a3b;
+      --surface: #ffffff;
+      --surface-hover: #faf8f5;
+      --border: #d9d4ca;
+      --listening: #c45a3b;
+      --success: #5a8a5e;
+      --link: #3d6a99;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'Source Serif 4', Georgia, serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    /* Login Screen */
+    .login-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    .login-screen.hidden {
+      display: none;
+    }
+
+    .login-screen h1 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 3.5rem;
+      font-weight: 300;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.5rem;
+      color: var(--fg);
+    }
+
+    .login-screen p {
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--fg-muted);
+      font-size: 0.7rem;
+      font-weight: 400;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 3rem;
+    }
+
+    .login-btn {
+      background: var(--fg);
+      color: var(--bg);
+      border: none;
+      padding: 1rem 2.5rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-radius: 4px;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(45, 42, 36, 0.15);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Main Voice Screen */
+    .voice-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .voice-screen.hidden {
+      display: none;
+    }
+
+    /* The Button - Central Control */
+    .button-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .main-button {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: none;
+      background: var(--fg);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 20px rgba(45, 42, 36, 0.25);
+    }
+
+    .main-button:hover {
+      transform: scale(1.08);
+      box-shadow: 0 6px 28px rgba(45, 42, 36, 0.35);
+    }
+
+    .main-button:active {
+      transform: scale(0.96);
+    }
+
+    .main-button svg {
+      width: 28px;
+      height: 28px;
+      stroke: var(--bg);
+      stroke-width: 1.75;
+      fill: none;
+      transition: all 0.2s ease;
+    }
+
+    .main-button .stop-icon {
+      display: none;
+    }
+
+    .main-button .spinner-icon {
+      display: none;
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(245, 240, 232, 0.3);
+      border-top-color: var(--bg);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* Button States */
+    .main-button.listening {
+      background: var(--accent);
+      box-shadow: 0 4px 24px rgba(196, 90, 59, 0.4);
+    }
+
+    .main-button.listening .mic-icon {
+      display: none;
+    }
+
+    .main-button.listening .stop-icon {
+      display: block;
+    }
+
+    .main-button.processing {
+      opacity: 0.8;
+      cursor: wait;
+    }
+
+    .main-button.processing .mic-icon,
+    .main-button.processing .stop-icon {
+      display: none;
+    }
+
+    .main-button.processing .spinner-icon {
+      display: block;
+    }
+
+    .main-button.speaking {
+      background: var(--accent);
+      box-shadow: 0 4px 24px rgba(196, 90, 59, 0.4);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Status Text */
+    .status-text {
+      position: absolute;
+      bottom: -50px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--fg-muted);
+      white-space: nowrap;
+      transition: all 0.3s ease;
+    }
+
+    .status-text.listening {
+      color: var(--accent);
+    }
+
+    .status-text.speaking {
+      color: var(--accent);
+    }
+
+    /* Hint text below button */
+    .hint-text {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--fg-muted);
+      opacity: 0.6;
+      transition: opacity 0.3s ease;
+    }
+
+    .hint-text.hidden {
+      opacity: 0;
+    }
+
+    .hint-text kbd {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.65rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      margin: 0 0.15rem;
+    }
+
+    /* Bottom Controls */
+    .bottom-controls {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .control-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.9rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--fg-muted);
+    }
+
+    .control-pill:hover {
+      border-color: var(--fg-muted);
+      color: var(--fg);
+    }
+
+    .control-pill.active {
+      border-color: var(--link);
+      background: rgba(61, 106, 153, 0.1);
+      color: var(--link);
+    }
+
+    .control-pill svg {
+      width: 14px;
+      height: 14px;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    .control-pill.hidden {
+      display: none;
+    }
+
+    /* Search pill - show on/off state clearly */
+    .search-pill .status-indicator {
+      font-size: 0.6rem;
+      opacity: 0.7;
+    }
+
+    .search-pill.active .status-indicator {
+      opacity: 1;
+    }
+
+    /* Stop button special styling */
+    .stop-pill {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .stop-pill:hover {
+      background: rgba(196, 90, 59, 0.1);
+    }
+
+    /* Settings menu - top right */
+    .settings-menu {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      z-index: 100;
+    }
+
+    .settings-menu.hidden {
+      display: none;
+    }
+
+    .settings-menu-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      opacity: 0.6;
+    }
+
+    .settings-menu-btn:hover {
+      opacity: 1;
+      border-color: var(--fg-muted);
+    }
+
+    .settings-menu-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--fg-muted);
+    }
+
+    .settings-menu-btn:hover svg {
+      fill: var(--fg);
+    }
+
+    /* Settings dropdown */
+    .settings-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 0.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+      min-width: 140px;
+      overflow: hidden;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-8px);
+      transition: all 0.2s ease;
+    }
+
+    .settings-dropdown.open {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .settings-dropdown button {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: none;
+      border: none;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: var(--fg);
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      transition: background 0.15s ease;
+    }
+
+    .settings-dropdown button:hover {
+      background: var(--bg);
+    }
+
+    .settings-dropdown button svg {
+      width: 14px;
+      height: 14px;
+      stroke: var(--fg-muted);
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    .settings-dropdown .divider {
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Cost Display */
+    .cost-display {
+      position: fixed;
+      top: 1.35rem;
+      left: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.6rem;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      color: var(--fg-muted);
+      opacity: 0.5;
+      z-index: 10;
+      font-variant-numeric: tabular-nums;
+      transition: opacity 0.2s ease;
+    }
+
+    .cost-display:hover {
+      opacity: 0.8;
+    }
+
+    .cost-display.hidden {
+      display: none;
+    }
+
+    .cost-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .cost-label {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      width: 3.5em;
+    }
+
+    .cost-value {
+      color: var(--fg);
+    }
+
+    /* Voice Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(45, 42, 36, 0.4);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+
+    .modal-overlay.hidden {
+      display: none;
+    }
+
+    .modal {
+      background: var(--surface);
+      border-radius: 8px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 70vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h3 {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--fg);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.25rem;
+      color: var(--fg-muted);
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+      transition: color 0.15s ease;
+    }
+
+    .modal-close:hover {
+      color: var(--fg);
+    }
+
+    .modal-body {
+      padding: 1rem;
+      overflow-y: auto;
+    }
+
+    .voice-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .voice-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0.9rem;
+      background: var(--bg);
+      border: 1px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .voice-item:hover {
+      background: var(--bg-warm);
+    }
+
+    .voice-item.selected {
+      border-color: var(--accent);
+      background: rgba(196, 90, 59, 0.1);
+    }
+
+    .voice-radio {
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .voice-item.selected .voice-radio {
+      border-color: var(--accent);
+    }
+
+    .voice-item.selected .voice-radio::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+
+    .voice-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .voice-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--fg);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .voice-lang {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--fg-muted);
+      margin-top: 0.1rem;
+    }
+
+    .voice-preview {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--fg-muted);
+      padding: 0.35rem 0.6rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.6rem;
+      font-weight: 500;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .voice-preview:hover {
+      border-color: var(--fg-muted);
+      color: var(--fg);
+    }
+
+    /* Error Toast */
+    .error-toast {
+      position: fixed;
+      bottom: 6rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      padding: 0.75rem 1.25rem;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent);
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 200;
+      border-radius: 4px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      pointer-events: none;
+    }
+
+    .error-toast.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      .main-button {
+        width: 72px;
+        height: 72px;
+      }
+
+      .hint-text {
+        display: none;
+      }
+
+      .bottom-controls {
+        bottom: 1.5rem;
+      }
+
+      .cost-display {
+        left: 1rem;
+        font-size: 0.55rem;
+      }
+
+      .settings-menu {
+        top: 1rem;
+        right: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Voice Settings Modal -->
+  <div class="modal-overlay hidden" id="voiceModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Voice Settings</h3>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="voice-list" id="voiceList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Screen -->
+  <div class="login-screen" id="loginScreen">
+    <h1>Speak</h1>
+    <p>Voice interface for AI</p>
+    <button class="login-btn" id="loginBtn">Connect with OpenRouter</button>
+  </div>
+
+  <!-- Main Voice Screen -->
+  <div class="voice-screen hidden" id="voiceScreen">
+    <!-- The Button -->
+    <div class="button-container">
+      <button class="main-button" id="mainButton">
+        <svg class="mic-icon" viewBox="0 0 24 24">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+        <svg class="stop-icon" viewBox="0 0 24 24">
+          <rect x="6" y="6" width="12" height="12" rx="1"/>
+        </svg>
+        <div class="spinner-icon"></div>
+      </button>
+      <div class="status-text" id="statusText">Ready</div>
+    </div>
+
+    <!-- Hint -->
+    <div class="hint-text" id="hintText">
+      Press <kbd>space</kbd> or tap the button to speak
+    </div>
+
+    <!-- Settings menu - top right -->
+    <div class="settings-menu" id="settingsMenu">
+      <button class="settings-menu-btn" id="settingsMenuBtn" title="Settings">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="5" r="1.5"/>
+          <circle cx="12" cy="12" r="1.5"/>
+          <circle cx="12" cy="19" r="1.5"/>
+        </svg>
+      </button>
+      <div class="settings-dropdown" id="settingsDropdown">
+        <button id="voiceSettingsBtn">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          </svg>
+          Voice
+        </button>
+        <div class="divider"></div>
+        <button id="logoutBtn">
+          <svg viewBox="0 0 24 24">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Logout
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="bottom-controls" id="bottomControls">
+      <button class="control-pill search-pill" id="searchToggle">
+        <svg viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <span>Web Search</span>
+        <span class="status-indicator" id="searchStatus">off</span>
+      </button>
+      <button class="control-pill stop-pill hidden" id="stopBtn">
+        <svg viewBox="0 0 24 24">
+          <rect x="6" y="6" width="12" height="12" rx="1"/>
+        </svg>
+        <span>Stop</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Cost Display -->
+  <div class="cost-display hidden" id="costDisplay">
+    <div class="cost-item">
+      <span class="cost-label">Last</span>
+      <span class="cost-value" id="costLast">$0.00000</span>
+    </div>
+    <div class="cost-item">
+      <span class="cost-label">Total</span>
+      <span class="cost-value" id="costTotal">$0.00000</span>
+    </div>
+  </div>
+
+  <div class="error-toast" id="errorToast"></div>
+
+  <script>
+    // ============ Configuration ============
+    const OPENROUTER_AUTH_URL = 'https://openrouter.ai/auth';
+    const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1';
+    const MODEL = 'google/gemini-3-flash-preview';
+    const MODEL_ONLINE = 'google/gemini-3-flash-preview:online';
+    const CALLBACK_URL = window.location.origin + window.location.pathname;
+
+    // ============ State ============
+    let apiKey = localStorage.getItem('openrouter_api_key');
+    let isListening = false;
+    let conversationHistory = [];
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let audioStream = null;
+    let selectedVoiceName = localStorage.getItem('selectedVoice') || null;
+    let webSearchEnabled = localStorage.getItem('webSearchEnabled') === 'true';
+    let speechQueue = [];
+    let isSpeaking = false;
+    let shouldStopSpeaking = false;
+
+    // Stats
+    const stats = {
+      totalCost: 0,
+      lastCost: 0
+    };
+
+    // ============ DOM Elements ============
+    const loginScreen = document.getElementById('loginScreen');
+    const voiceScreen = document.getElementById('voiceScreen');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const mainButton = document.getElementById('mainButton');
+    const statusText = document.getElementById('statusText');
+    const hintText = document.getElementById('hintText');
+    const settingsMenu = document.getElementById('settingsMenu');
+    const settingsMenuBtn = document.getElementById('settingsMenuBtn');
+    const settingsDropdown = document.getElementById('settingsDropdown');
+    const voiceSettingsBtn = document.getElementById('voiceSettingsBtn');
+    const searchToggle = document.getElementById('searchToggle');
+    const searchStatus = document.getElementById('searchStatus');
+    const stopBtn = document.getElementById('stopBtn');
+    const voiceModal = document.getElementById('voiceModal');
+    const modalClose = document.getElementById('modalClose');
+    const voiceList = document.getElementById('voiceList');
+    const costDisplay = document.getElementById('costDisplay');
+    const costLast = document.getElementById('costLast');
+    const costTotal = document.getElementById('costTotal');
+    const errorToast = document.getElementById('errorToast');
+
+    // ============ Initialization ============
+    function init() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+
+      if (code) {
+        handleOAuthCallback(code);
+        return;
+      }
+
+      if (apiKey) {
+        showVoiceScreen();
+      } else {
+        showLoginScreen();
+      }
+
+      updateSearchToggleUI();
+      setupEventListeners();
+    }
+
+    // ============ OAuth Flow ============
+    function generateCodeVerifier() {
+      const array = new Uint8Array(32);
+      crypto.getRandomValues(array);
+      return btoa(String.fromCharCode(...array))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+
+    async function generateCodeChallenge(verifier) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(verifier);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      return btoa(String.fromCharCode(...new Uint8Array(hash)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+
+    async function startOAuthFlow() {
+      const codeVerifier = generateCodeVerifier();
+      const codeChallenge = await generateCodeChallenge(codeVerifier);
+      sessionStorage.setItem('code_verifier', codeVerifier);
+      const authUrl = `${OPENROUTER_AUTH_URL}?callback_url=${encodeURIComponent(CALLBACK_URL)}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
+      window.location.href = authUrl;
+    }
+
+    async function handleOAuthCallback(code) {
+      const codeVerifier = sessionStorage.getItem('code_verifier');
+      if (!codeVerifier) {
+        showError('Authentication failed');
+        showLoginScreen();
+        return;
+      }
+
+      try {
+        const response = await fetch(`${OPENROUTER_API_URL}/auth/keys`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            code,
+            code_verifier: codeVerifier,
+            code_challenge_method: 'S256'
+          })
+        });
+
+        if (!response.ok) throw new Error('Failed to authenticate');
+
+        const data = await response.json();
+        apiKey = data.key;
+        localStorage.setItem('openrouter_api_key', apiKey);
+        sessionStorage.removeItem('code_verifier');
+        window.history.replaceState({}, document.title, window.location.pathname);
+        showVoiceScreen();
+      } catch (error) {
+        console.error('OAuth error:', error);
+        showError('Authentication failed');
+        showLoginScreen();
+      }
+    }
+
+    function logout() {
+      apiKey = null;
+      localStorage.removeItem('openrouter_api_key');
+      conversationHistory = [];
+      showLoginScreen();
+    }
+
+    // ============ UI State ============
+    function showLoginScreen() {
+      loginScreen.classList.remove('hidden');
+      voiceScreen.classList.add('hidden');
+      costDisplay.classList.add('hidden');
+    }
+
+    function showVoiceScreen() {
+      loginScreen.classList.add('hidden');
+      voiceScreen.classList.remove('hidden');
+    }
+
+    function setButtonState(state) {
+      mainButton.classList.remove('listening', 'processing', 'speaking');
+      statusText.classList.remove('listening', 'speaking');
+
+      switch (state) {
+        case 'listening':
+          mainButton.classList.add('listening');
+          statusText.classList.add('listening');
+          statusText.textContent = 'Listening';
+          hintText.classList.add('hidden');
+          break;
+        case 'processing':
+          mainButton.classList.add('processing');
+          statusText.textContent = 'Thinking';
+          hintText.classList.add('hidden');
+          break;
+        case 'speaking':
+          mainButton.classList.add('speaking');
+          statusText.classList.add('speaking');
+          statusText.textContent = 'Speaking';
+          hintText.classList.add('hidden');
+          break;
+        default:
+          statusText.textContent = 'Ready';
+          hintText.classList.remove('hidden');
+      }
+    }
+
+    function showError(message) {
+      errorToast.textContent = message;
+      errorToast.classList.add('visible');
+      setTimeout(() => errorToast.classList.remove('visible'), 4000);
+    }
+
+    function updateSearchToggleUI() {
+      searchToggle.classList.toggle('active', webSearchEnabled);
+      searchStatus.textContent = webSearchEnabled ? 'on' : 'off';
+    }
+
+    function updateCostDisplay() {
+      costDisplay.classList.remove('hidden');
+      costLast.textContent = `$${stats.lastCost.toFixed(5)}`;
+      costTotal.textContent = `$${stats.totalCost.toFixed(5)}`;
+    }
+
+    // ============ Audio Recording ============
+    async function startRecording() {
+      try {
+        audioChunks = [];
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+        let mimeType = 'audio/webm';
+        if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          mimeType = 'audio/webm;codecs=opus';
+        }
+
+        mediaRecorder = new MediaRecorder(audioStream, { mimeType });
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(audioChunks, { type: mimeType });
+          audioStream.getTracks().forEach(track => track.stop());
+          audioStream = null;
+
+          try {
+            const wavBlob = await convertToWav(audioBlob);
+            const base64Audio = await blobToBase64(wavBlob);
+            await sendAudioToAPI(base64Audio);
+          } catch (e) {
+            console.error('Audio conversion error:', e);
+            showError('Failed to process audio');
+            setButtonState('ready');
+          }
+        };
+
+        mediaRecorder.start();
+        isListening = true;
+        setButtonState('listening');
+        searchToggle.classList.add('hidden');
+
+      } catch (error) {
+        console.error('Microphone error:', error);
+        showError('Microphone access denied');
+        setButtonState('ready');
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      isListening = false;
+      setButtonState('processing');
+    }
+
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function convertToWav(audioBlob) {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      const wavBuffer = audioBufferToWav(audioBuffer);
+      return new Blob([wavBuffer], { type: 'audio/wav' });
+    }
+
+    function audioBufferToWav(buffer) {
+      const numChannels = buffer.numberOfChannels;
+      const sampleRate = buffer.sampleRate;
+      const format = 1;
+      const bitDepth = 16;
+
+      let interleaved;
+      if (numChannels === 2) {
+        const left = buffer.getChannelData(0);
+        const right = buffer.getChannelData(1);
+        interleaved = new Float32Array(left.length + right.length);
+        for (let i = 0, j = 0; i < left.length; i++, j += 2) {
+          interleaved[j] = left[i];
+          interleaved[j + 1] = right[i];
+        }
+      } else {
+        interleaved = buffer.getChannelData(0);
+      }
+
+      const dataLength = interleaved.length * (bitDepth / 8);
+      const wavBuffer = new ArrayBuffer(44 + dataLength);
+      const view = new DataView(wavBuffer);
+
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, 36 + dataLength, true);
+      writeString(view, 8, 'WAVE');
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, format, true);
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * numChannels * (bitDepth / 8), true);
+      view.setUint16(32, numChannels * (bitDepth / 8), true);
+      view.setUint16(34, bitDepth, true);
+      writeString(view, 36, 'data');
+      view.setUint32(40, dataLength, true);
+
+      for (let i = 0; i < interleaved.length; i++) {
+        const sample = Math.max(-1, Math.min(1, interleaved[i]));
+        view.setInt16(44 + i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+      }
+
+      return wavBuffer;
+    }
+
+    function writeString(view, offset, string) {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    }
+
+    // ============ API Communication ============
+    function getModel() {
+      return webSearchEnabled ? MODEL_ONLINE : MODEL;
+    }
+
+    function buildSystemPrompt() {
+      const today = new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      return `You are a voice assistant. Today is ${today}. You receive audio from the user's microphone and respond with spoken output.
+
+IMPORTANT: First transcribe what the user said using [USER]...[/USER] tags at the start of your response. This is required for the system to work. Example:
+
+[USER]
+What's the weather like?
+[/USER]
+
+Your response goes here...
+
+Your responses will be converted to speech, so:
+- Be concise and conversational
+- Avoid lists, bullet points, or complex formatting
+- Don't use special characters or symbols that don't speak well
+- For numbers, acronyms, or technical terms that might be mispronounced, add a pronunciation hint in double brackets immediately after: "API [[A P I]]" or "$50 [[fifty dollars]]"
+- Keep responses focused and to the point
+
+Respond naturally as if having a spoken conversation.`;
+    }
+
+    async function sendAudioToAPI(base64Audio) {
+      const requestStartTime = performance.now();
+      shouldStopSpeaking = false;
+      speechQueue = [];
+
+      try {
+        const response = await fetch(`${OPENROUTER_API_URL}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': window.location.origin,
+            'X-Title': 'Speak'
+          },
+          body: JSON.stringify({
+            model: getModel(),
+            stream: true,
+            messages: [
+              { role: 'system', content: buildSystemPrompt() },
+              ...conversationHistory,
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: 'Listen to this audio and respond.' },
+                  { type: 'input_audio', input_audio: { data: base64Audio, format: 'wav' } }
+                ]
+              }
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error?.message || 'API request failed');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = '';
+        let sentenceBuffer = '';
+        let buffer = '';
+        let usage = null;
+        let userTranscript = null;
+        let transcriptExtracted = false;
+
+        setButtonState('speaking');
+        searchToggle.classList.add('hidden');
+        stopBtn.classList.remove('hidden');
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
+
+            const data = trimmedLine.slice(6);
+            if (data === '[DONE]') continue;
+
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.usage) usage = parsed.usage;
+
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                fullResponse += content;
+
+                // Extract user transcript
+                if (!transcriptExtracted) {
+                  const match = fullResponse.match(/\[USER\]\s*([\s\S]*?)\s*\[\/USER\]/);
+                  if (match) {
+                    userTranscript = match[1].trim();
+                    transcriptExtracted = true;
+                  }
+                }
+
+                // Queue speech for response (after transcript extraction)
+                if (transcriptExtracted) {
+                  const endTagIndex = fullResponse.indexOf('[/USER]');
+                  if (endTagIndex !== -1) {
+                    const responseOnly = fullResponse.slice(endTagIndex + 7);
+                    const prevResponse = fullResponse.slice(0, -content.length);
+                    const prevEndIdx = prevResponse.indexOf('[/USER]');
+                    const prevResponseOnly = prevEndIdx !== -1 ? prevResponse.slice(prevEndIdx + 7) : '';
+
+                    if (responseOnly.length > prevResponseOnly.length) {
+                      sentenceBuffer += responseOnly.slice(prevResponseOnly.length);
+                    }
+                  }
+                }
+
+                // Speak complete sentences
+                const sentenceMatch = sentenceBuffer.match(/^(.*?[.!?])\s*/);
+                if (sentenceMatch) {
+                  const sentence = sentenceMatch[1];
+                  sentenceBuffer = sentenceBuffer.slice(sentenceMatch[0].length);
+                  queueSpeech(sentence);
+                }
+              }
+            } catch (e) {}
+          }
+        }
+
+        // Speak remaining text
+        if (sentenceBuffer.trim()) {
+          queueSpeech(sentenceBuffer.trim());
+        }
+
+        // Update stats from API response
+        if (usage && typeof usage.cost === 'number') {
+          stats.lastCost = usage.cost;
+          stats.totalCost += usage.cost;
+          updateCostDisplay();
+        }
+
+        // Clean response for history
+        let responseOnly = fullResponse;
+        const endTagIndex = fullResponse.indexOf('[/USER]');
+        if (endTagIndex !== -1) {
+          responseOnly = fullResponse.slice(endTagIndex + 7).trim();
+        }
+        const cleanResponse = stripSpeechHints(responseOnly);
+
+        // Save to conversation history
+        conversationHistory.push({ role: 'user', content: userTranscript || '[voice message]' });
+        conversationHistory.push({ role: 'assistant', content: cleanResponse });
+
+      } catch (error) {
+        console.error('API error:', error);
+        showError(error.message);
+        setButtonState('ready');
+        searchToggle.classList.remove('hidden');
+        stopBtn.classList.add('hidden');
+      }
+    }
+
+    // ============ Text Processing ============
+    function stripSpeechHints(text) {
+      return text.replace(/\[\[([^\]]+)\]\]/g, '');
+    }
+
+    function convertToSpeech(text) {
+      const hintRegex = /\[\[([^\]]+)\]\]/g;
+      let result = text;
+      let match;
+      const replacements = [];
+
+      while ((match = hintRegex.exec(result)) !== null) {
+        const hint = match[1];
+        const hintStart = match.index;
+        const hintEnd = hintStart + match[0].length;
+        const hintWordCount = hint.trim().split(/\s+/).length;
+
+        const textBefore = result.slice(0, hintStart).trimEnd();
+        const wordsBefore = textBefore.split(/\s+/);
+        const wordsToReplace = Math.min(hintWordCount, wordsBefore.length);
+        const replaceStart = textBefore.length - wordsBefore.slice(-wordsToReplace).join(' ').length;
+
+        replacements.push({ start: replaceStart, end: hintEnd, replacement: hint });
+      }
+
+      for (let i = replacements.length - 1; i >= 0; i--) {
+        const r = replacements[i];
+        result = result.slice(0, r.start) + r.replacement + result.slice(r.end);
+      }
+
+      return result;
+    }
+
+    function sanitizeForSpeech(text) {
+      let result = convertToSpeech(text);
+      return result
+        .replace(/^#{1,6}\s+/gm, '')
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/https?:\/\/[^\s)]+/g, '')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/\*([^*]+)\*/g, '$1')
+        .replace(/__([^_]+)__/g, '$1')
+        .replace(/_([^_]+)_/g, '$1')
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/^>\s*/gm, '')
+        .replace(/^[-*+]\s+/gm, ', ')
+        .replace(/^\d+\.\s+/gm, ', ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    // ============ Text-to-Speech ============
+    function queueSpeech(text) {
+      if (!text.trim() || shouldStopSpeaking) return;
+      const sanitized = sanitizeForSpeech(text);
+      if (!sanitized) return;
+      speechQueue.push(sanitized);
+      if (!isSpeaking) processQueue();
+    }
+
+    function processQueue() {
+      if (shouldStopSpeaking || speechQueue.length === 0) {
+        isSpeaking = false;
+        if (speechQueue.length === 0) {
+          setButtonState('ready');
+          searchToggle.classList.remove('hidden');
+          stopBtn.classList.add('hidden');
+        }
+        return;
+      }
+
+      isSpeaking = true;
+      const text = speechQueue.shift();
+
+      if (!window.speechSynthesis) {
+        processQueue();
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1;
+      utterance.pitch = 1;
+
+      // Select voice
+      const voices = speechSynthesis.getVoices();
+      let voice = null;
+
+      if (selectedVoiceName) {
+        voice = voices.find(v => v.name === selectedVoiceName);
+      }
+
+      if (!voice) {
+        const preferred = [
+          'Google UK English Female', 'Google UK English Male', 'Google US English',
+          'Ava (Premium)', 'Zoe (Premium)', 'Samantha', 'Karen'
+        ];
+        for (const name of preferred) {
+          voice = voices.find(v => v.name.includes(name));
+          if (voice) break;
+        }
+        if (!voice) voice = voices.find(v => v.lang.startsWith('en'));
+      }
+
+      if (voice) utterance.voice = voice;
+
+      utterance.onend = () => processQueue();
+      utterance.onerror = () => processQueue();
+
+      speechSynthesis.speak(utterance);
+    }
+
+    function stopSpeaking() {
+      shouldStopSpeaking = true;
+      speechQueue = [];
+      speechSynthesis.cancel();
+      isSpeaking = false;
+      setButtonState('ready');
+      searchToggle.classList.remove('hidden');
+      stopBtn.classList.add('hidden');
+    }
+
+    // ============ Voice Settings ============
+    function populateVoiceList() {
+      const voices = speechSynthesis.getVoices();
+      const englishVoices = voices.filter(v => v.lang.startsWith('en'));
+
+      englishVoices.sort((a, b) => {
+        const aGoogle = a.name.includes('Google');
+        const bGoogle = b.name.includes('Google');
+        if (aGoogle && !bGoogle) return -1;
+        if (!aGoogle && bGoogle) return 1;
+        const aPremium = a.name.includes('Premium') || a.name.includes('Enhanced');
+        const bPremium = b.name.includes('Premium') || b.name.includes('Enhanced');
+        if (aPremium && !bPremium) return -1;
+        if (!aPremium && bPremium) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      voiceList.innerHTML = '';
+
+      englishVoices.forEach(voice => {
+        const isSelected = selectedVoiceName === voice.name;
+        const item = document.createElement('div');
+        item.className = `voice-item${isSelected ? ' selected' : ''}`;
+        item.innerHTML = `
+          <div class="voice-radio"></div>
+          <div class="voice-info">
+            <div class="voice-name">${voice.name}</div>
+            <div class="voice-lang">${voice.lang}</div>
+          </div>
+          <button class="voice-preview">Preview</button>
+        `;
+
+        item.addEventListener('click', (e) => {
+          if (e.target.classList.contains('voice-preview')) return;
+          selectVoice(voice.name);
+        });
+
+        item.querySelector('.voice-preview').addEventListener('click', (e) => {
+          e.stopPropagation();
+          previewVoice(voice);
+        });
+
+        voiceList.appendChild(item);
+      });
+    }
+
+    function selectVoice(voiceName) {
+      selectedVoiceName = voiceName;
+      localStorage.setItem('selectedVoice', voiceName);
+      document.querySelectorAll('.voice-item').forEach(item => {
+        const name = item.querySelector('.voice-name').textContent;
+        item.classList.toggle('selected', name === voiceName);
+      });
+    }
+
+    function previewVoice(voice) {
+      speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance("Hello! I'm your voice assistant.");
+      utterance.voice = voice;
+      speechSynthesis.speak(utterance);
+    }
+
+    function openVoiceSettings() {
+      populateVoiceList();
+      voiceModal.classList.remove('hidden');
+    }
+
+    function closeVoiceSettings() {
+      speechSynthesis.cancel();
+      voiceModal.classList.add('hidden');
+    }
+
+    // ============ Event Listeners ============
+    function setupEventListeners() {
+      loginBtn.addEventListener('click', startOAuthFlow);
+      logoutBtn.addEventListener('click', () => {
+        settingsDropdown.classList.remove('open');
+        logout();
+      });
+
+      // Main button click
+      mainButton.addEventListener('click', () => {
+        if (isSpeaking || speechQueue.length > 0) {
+          stopSpeaking();
+        }
+        if (isListening) {
+          stopRecording();
+        } else {
+          startRecording();
+        }
+      });
+
+      // Spacebar
+      document.addEventListener('keydown', (e) => {
+        if (!voiceModal.classList.contains('hidden')) return;
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (!apiKey) return;
+
+        if (e.code === 'Space') {
+          e.preventDefault();
+          if (isSpeaking || speechQueue.length > 0) {
+            stopSpeaking();
+          }
+          if (isListening) {
+            stopRecording();
+          } else {
+            startRecording();
+          }
+        }
+      });
+
+      // Settings dropdown menu
+      settingsMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        settingsDropdown.classList.toggle('open');
+      });
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!settingsDropdown.contains(e.target) && e.target !== settingsMenuBtn) {
+          settingsDropdown.classList.remove('open');
+        }
+      });
+
+      // Voice settings from dropdown
+      voiceSettingsBtn.addEventListener('click', () => {
+        settingsDropdown.classList.remove('open');
+        openVoiceSettings();
+      });
+
+      // Search toggle
+      searchToggle.addEventListener('click', () => {
+        webSearchEnabled = !webSearchEnabled;
+        localStorage.setItem('webSearchEnabled', webSearchEnabled);
+        updateSearchToggleUI();
+      });
+
+      // Stop button
+      stopBtn.addEventListener('click', stopSpeaking);
+
+      // Voice modal
+      modalClose.addEventListener('click', closeVoiceSettings);
+      voiceModal.addEventListener('click', (e) => {
+        if (e.target === voiceModal) closeVoiceSettings();
+      });
+
+      // Load voices
+      if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+      }
+    }
+
+    // ============ Start ============
+    init();
+  </script>
+</body>
+</html>
