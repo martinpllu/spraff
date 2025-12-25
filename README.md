@@ -1,9 +1,10 @@
 # Speak
 
-A simple voice interface for AI. No app to install, no subscription, just a single HTML file.
+A simple, private voice interface for AI. No app to install, no subscription, just a single HTML file.
 
 ## Features
 
+- **Private** - Zero Data Retention at every layer. No conversation history, no transcripts.
 - **Simple** - One HTML file. Host it yourself or use ours.
 - **No subscription** - Pay only for what you use via OpenRouter (fractions of a cent per conversation).
 - **Voice only** - Just you and the AI, talking.
