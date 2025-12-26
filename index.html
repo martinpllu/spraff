@@ -322,6 +322,10 @@
       opacity: 1;
     }
 
+    .search-pill .search-label-short {
+      display: none;
+    }
+
     /* Stop button special styling */
     .stop-pill {
       border-color: var(--accent);
@@ -330,6 +334,44 @@
 
     .stop-pill:hover {
       background: rgba(196, 90, 59, 0.1);
+    }
+
+    /* New chat button - top left */
+    .new-chat-btn {
+      position: fixed;
+      top: 1.5rem;
+      left: 1.5rem;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      z-index: 100;
+    }
+
+    .new-chat-btn:hover {
+      border-color: var(--fg-muted);
+    }
+
+    .new-chat-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: var(--fg-muted);
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .new-chat-btn:hover svg {
+      stroke: var(--fg);
+    }
+
+    .new-chat-btn.hidden {
+      display: none;
     }
 
     /* Settings menu - top right */
@@ -355,11 +397,9 @@
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
-      opacity: 0.6;
     }
 
     .settings-menu-btn:hover {
-      opacity: 1;
       border-color: var(--fg-muted);
     }
 
@@ -996,7 +1036,7 @@
     /* Text Input Mode */
     .text-input-container {
       position: fixed;
-      bottom: 5rem;
+      bottom: 5.5rem;
       left: 50%;
       transform: translateX(-50%);
       width: calc(100% - 3rem);
@@ -1185,8 +1225,13 @@
         right: 1rem;
       }
 
+      .new-chat-btn {
+        top: 1rem;
+        left: 1rem;
+      }
+
       .text-input-container {
-        bottom: 4.5rem;
+        bottom: 5.5rem;
         width: calc(100% - 2rem);
       }
 
@@ -1200,6 +1245,14 @@
 
       .message {
         font-size: 0.95rem;
+      }
+
+      .search-pill .search-label-long {
+        display: none;
+      }
+
+      .search-pill .search-label-short {
+        display: inline;
       }
     }
   </style>
@@ -1287,6 +1340,15 @@
 
   <!-- Main Voice Screen -->
   <div class="voice-screen hidden" id="voiceScreen">
+    <!-- New Chat Button -->
+    <button class="new-chat-btn hidden" id="newChatBtn" title="New chat">
+      <svg viewBox="0 0 24 24">
+        <path d="M23 4v6h-6"/>
+        <path d="M1 20v-6h6"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+    </button>
+
     <!-- Conversation History -->
     <div class="conversation-history" id="conversationHistory"></div>
 
@@ -1386,7 +1448,8 @@
           <circle cx="11" cy="11" r="8"/>
           <line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
-        <span>Web Search</span>
+        <span class="search-label-long">Web Search</span>
+        <span class="search-label-short">Search</span>
         <span class="status-indicator" id="searchStatus">off</span>
       </button>
       <button class="control-pill stop-pill hidden" id="stopBtn">
@@ -1463,6 +1526,7 @@
     const voiceModeBtn = document.getElementById('voiceModeBtn');
     const textModeBtn = document.getElementById('textModeBtn');
     const conversationHistoryEl = document.getElementById('conversationHistory');
+    const newChatBtn = document.getElementById('newChatBtn');
 
     // ============ Initialization ============
     function init() {
@@ -1611,7 +1675,7 @@
 
       // Update session stats
       costLast.textContent = stats.lastCost > 0 ? `$${stats.lastCost.toFixed(5)}` : '—';
-      costSession.textContent = `$${stats.sessionCost.toFixed(2)}`;
+      costSession.textContent = `$${stats.sessionCost.toFixed(5)}`;
 
       // Fetch balance
       costBalance.textContent = '...';
@@ -1737,6 +1801,23 @@
       html = html.replace(/\n+/g, '\n');
 
       return html;
+    }
+
+    // ============ New Chat ============
+    function startNewChat() {
+      conversationHistory = [];
+      conversationHistoryEl.innerHTML = '';
+      stats.sessionCost = 0;
+      stats.lastCost = 0;
+      updateNewChatButton();
+    }
+
+    function updateNewChatButton() {
+      if (conversationHistory.length > 0) {
+        newChatBtn.classList.remove('hidden');
+      } else {
+        newChatBtn.classList.add('hidden');
+      }
     }
 
     // ============ Mode Switching ============
@@ -2197,6 +2278,7 @@ Respond naturally as if having a spoken conversation.`;
         // Save to conversation history
         conversationHistory.push({ role: 'user', content: userTranscript || '[voice message]' });
         conversationHistory.push({ role: 'assistant', content: cleanResponse });
+        updateNewChatButton();
 
       } catch (error) {
         console.error('API error:', error);
@@ -2309,6 +2391,7 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         // Save to conversation history
         conversationHistory.push({ role: 'user', content: userText });
         conversationHistory.push({ role: 'assistant', content: fullResponse });
+        updateNewChatButton();
 
       } catch (error) {
         console.error('API error:', error);
@@ -2756,6 +2839,9 @@ Be concise and direct in your responses. Focus on being helpful and informative.
       // Mode switching
       voiceModeBtn.addEventListener('click', () => setTextMode(false));
       textModeBtn.addEventListener('click', () => setTextMode(true));
+
+      // New chat
+      newChatBtn.addEventListener('click', startNewChat);
 
       // Text input handling
       textInput.addEventListener('input', () => {
