@@ -1960,8 +1960,12 @@
 
         // Scroll so user message appears at top of visible area
         requestAnimationFrame(() => {
+          // Use getBoundingClientRect for accurate position
+          const groupRect = group.getBoundingClientRect();
+          const containerRect = conversationHistoryEl.getBoundingClientRect();
+          const scrollTarget = conversationHistoryEl.scrollTop + (groupRect.top - containerRect.top) - 20;
           conversationHistoryEl.scrollTo({
-            top: group.offsetTop - 20,
+            top: scrollTarget,
             behavior: 'smooth'
           });
         });
