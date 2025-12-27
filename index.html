@@ -1949,10 +1949,12 @@
         group.appendChild(userEl);
 
         // Scroll so user message appears at top of visible area
-        // offsetTop is relative to container, subtract padding (5rem = 80px)
-        conversationHistoryEl.scrollTo({
-          top: group.offsetTop - 80,
-          behavior: 'smooth'
+        // Use getBoundingClientRect to get actual position
+        requestAnimationFrame(() => {
+          const containerRect = conversationHistoryEl.getBoundingClientRect();
+          const groupRect = group.getBoundingClientRect();
+          const scrollOffset = groupRect.top - containerRect.top + conversationHistoryEl.scrollTop - 20;
+          conversationHistoryEl.scrollTo({ top: scrollOffset, behavior: 'smooth' });
         });
         return;
       } else {
