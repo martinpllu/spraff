@@ -1948,8 +1948,11 @@
         userEl.textContent = content;
         group.appendChild(userEl);
 
-        // Scroll user message to top of visible area
-        group.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Scroll so user message appears at top of visible area
+        const containerTop = conversationHistoryEl.getBoundingClientRect().top;
+        const groupTop = group.getBoundingClientRect().top;
+        const offset = groupTop - containerTop + conversationHistoryEl.scrollTop;
+        conversationHistoryEl.scrollTo({ top: offset - 20, behavior: 'smooth' });
         return;
       } else {
         // Assistant message goes in the last group
