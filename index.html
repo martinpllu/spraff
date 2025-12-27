@@ -1963,11 +1963,14 @@
 
         // Scroll so user message appears at top of visible area
         requestAnimationFrame(() => {
-          // Scroll to put the message near the top (after the 4.5rem padding)
-          // The group's position in the scrollable content minus a small offset
-          const scrollTarget = group.offsetTop - 20;
+          // Calculate how far the group is from the top of the scrollable content
+          // by measuring its position relative to the container and adding current scroll
+          const containerTop = conversationHistoryEl.getBoundingClientRect().top;
+          const groupTop = group.getBoundingClientRect().top;
+          const relativePosition = groupTop - containerTop;
+          const scrollTarget = conversationHistoryEl.scrollTop + relativePosition - 72; // 72px = ~4.5rem padding
           conversationHistoryEl.scrollTo({
-            top: scrollTarget,
+            top: Math.max(0, scrollTarget),
             behavior: 'smooth'
           });
         });
