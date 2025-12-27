@@ -870,7 +870,7 @@
       position: fixed;
       inset: 0;
       overflow-y: auto;
-      padding: 5rem 1.5rem 12rem;
+      padding: 4.5rem 1.5rem 12rem;
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
@@ -1963,10 +1963,9 @@
 
         // Scroll so user message appears at top of visible area
         requestAnimationFrame(() => {
-          // Use getBoundingClientRect for accurate position
-          const groupRect = group.getBoundingClientRect();
-          const containerRect = conversationHistoryEl.getBoundingClientRect();
-          const scrollTarget = conversationHistoryEl.scrollTop + (groupRect.top - containerRect.top) - 20;
+          // Scroll to put the message near the top (after the 4.5rem padding)
+          // The group's position in the scrollable content minus a small offset
+          const scrollTarget = group.offsetTop - 20;
           conversationHistoryEl.scrollTo({
             top: scrollTarget,
             behavior: 'smooth'
