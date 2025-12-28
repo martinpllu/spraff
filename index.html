@@ -3,24 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Shy</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23f5f0e8'/><circle cx='50' cy='50' r='28' fill='none' stroke='%232d2a24' stroke-width='3' stroke-dasharray='120 60' stroke-linecap='round'/></svg>">
+  <title>Spraff</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%232D9B83'/><text x='50' y='68' text-anchor='middle' font-family='Nunito,sans-serif' font-size='55' font-weight='800' fill='white'>s</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f5f0e8;
-      --bg-warm: #ebe5db;
-      --fg: #2d2a24;
-      --fg-muted: #7a756b;
-      --accent: #c45a3b;
+      --bg: #FDF8F4;
+      --bg-warm: #F0F4F0;
+      --fg: #2D3436;
+      --fg-muted: #636E72;
+      --accent: #2D9B83;
       --surface: #ffffff;
-      --surface-hover: #faf8f5;
-      --border: #d9d4ca;
-      --listening: #c45a3b;
-      --success: #5a8a5e;
-      --link: #3d6a99;
+      --surface-hover: #F5FAF8;
+      --border: #E0E8E4;
+      --listening: #2D9B83;
+      --success: #00B894;
+      --link: #0984E3;
+      --secondary: #A29BFE;
+      --accent-light: #E0F2EE;
     }
 
     * {
@@ -29,13 +31,24 @@
       box-sizing: border-box;
     }
 
+    /* Remove focus outlines globally, use custom focus styles instead */
+    *:focus {
+      outline: none;
+    }
+
+    /* Accessible focus for keyboard navigation */
+    *:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
     html, body {
       height: 100%;
       overflow: hidden;
     }
 
     body {
-      font-family: 'Source Serif 4', Georgia, serif;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg);
       color: var(--fg);
     }
@@ -57,49 +70,49 @@
 
     .logo {
       margin-bottom: 1.5rem;
-      opacity: 0.7;
+      opacity: 1;
+      animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     }
 
-    .login-screen h1 {
-      font-family: 'Source Serif 4', Georgia, serif;
-      font-size: 3.5rem;
-      font-weight: 300;
-      letter-spacing: -0.03em;
-      margin-bottom: 0.5rem;
-      color: var(--fg);
+    @keyframes bounceIn {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { transform: scale(1.05); }
+      70% { transform: scale(0.9); }
+      100% { transform: scale(1); opacity: 1; }
     }
 
     .login-screen p {
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'DM Sans', sans-serif;
       color: var(--fg-muted);
-      font-size: 0.7rem;
-      font-weight: 400;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
+      font-size: 1rem;
+      font-weight: 500;
+      letter-spacing: 0.01em;
       margin-bottom: 3rem;
+      margin-top: 0.5rem;
     }
 
     .login-btn {
-      background: var(--fg);
-      color: var(--bg);
+      background: linear-gradient(135deg, var(--accent) 0%, #3DB896 100%);
+      color: white;
       border: none;
       padding: 1rem 2.5rem;
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.75rem;
-      font-weight: 500;
-      letter-spacing: 0.02em;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
       cursor: pointer;
-      transition: all 0.2s ease;
-      border-radius: 4px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 50px;
+      box-shadow: 0 4px 15px rgba(45, 155, 131, 0.3);
     }
 
     .login-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 30px rgba(45, 42, 36, 0.15);
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 8px 25px rgba(45, 155, 131, 0.4);
     }
 
     .login-btn:active {
-      transform: translateY(0);
+      transform: translateY(-1px) scale(0.98);
     }
 
     /* Main Voice Screen */
@@ -137,35 +150,35 @@
     }
 
     .main-button {
-      width: 80px;
-      height: 80px;
+      width: 88px;
+      height: 88px;
       border-radius: 50%;
       border: none;
-      background: var(--fg);
+      background: linear-gradient(135deg, var(--accent) 0%, #3DB896 100%);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 20px rgba(45, 42, 36, 0.25);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 6px 24px rgba(45, 155, 131, 0.35);
       outline: none;
       -webkit-tap-highlight-color: transparent;
     }
 
     .main-button:hover {
-      transform: scale(1.08);
-      box-shadow: 0 6px 28px rgba(45, 42, 36, 0.35);
+      transform: scale(1.1);
+      box-shadow: 0 10px 35px rgba(45, 155, 131, 0.45);
     }
 
     .main-button:active {
-      transform: scale(0.96);
+      transform: scale(0.95);
     }
 
     .main-button svg {
-      width: 28px;
-      height: 28px;
-      stroke: var(--bg);
-      stroke-width: 1.75;
+      width: 32px;
+      height: 32px;
+      stroke: white;
+      stroke-width: 2;
       fill: none;
       transition: all 0.2s ease;
     }
@@ -176,18 +189,24 @@
 
     .main-button .spinner-icon {
       display: none;
-      width: 28px;
-      height: 28px;
-      border: 3px solid rgba(245, 240, 232, 0.3);
-      border-top-color: var(--bg);
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
 
     /* Button States */
     .main-button.listening {
-      background: var(--accent);
-      box-shadow: 0 4px 24px rgba(196, 90, 59, 0.4);
+      background: linear-gradient(135deg, #3DB896 0%, #5BC9A8 100%);
+      box-shadow: 0 6px 28px rgba(45, 155, 131, 0.5);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
     }
 
     .main-button.listening .mic-icon {
@@ -227,7 +246,7 @@
       bottom: -50px;
       left: 50%;
       transform: translateX(-50%);
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.65rem;
       font-weight: 500;
       letter-spacing: 0.15em;
@@ -251,7 +270,7 @@
       bottom: 100px;
       left: 50%;
       transform: translateX(-50%);
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.7rem;
       color: var(--fg-muted);
       opacity: 0.6;
@@ -265,7 +284,7 @@
     .hint-text kbd {
       display: inline-block;
       padding: 0.15rem 0.5rem;
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.65rem;
       background: var(--surface);
       border: 1px solid var(--border);
@@ -295,7 +314,7 @@
       border-radius: 20px;
       cursor: pointer;
       transition: all 0.2s ease;
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.65rem;
       font-weight: 500;
       letter-spacing: 0.03em;
@@ -309,9 +328,9 @@
     }
 
     .control-pill.active {
-      border-color: var(--link);
-      background: rgba(61, 106, 153, 0.1);
-      color: var(--link);
+      border-color: var(--accent);
+      background: var(--accent-light);
+      color: var(--accent);
     }
 
     .control-pill svg {
@@ -344,10 +363,11 @@
     .stop-pill {
       border-color: var(--accent);
       color: var(--accent);
+      background: var(--accent-light);
     }
 
     .stop-pill:hover {
-      background: rgba(196, 90, 59, 0.1);
+      background: rgba(45, 155, 131, 0.2);
     }
 
     /* New chat button - top left */
@@ -439,20 +459,21 @@
       margin-top: 0.5rem;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-      min-width: 140px;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+      min-width: 160px;
       overflow: hidden;
       opacity: 0;
       visibility: hidden;
-      transform: translateY(-8px);
-      transition: all 0.2s ease;
+      transform: translateY(-8px) scale(0.95);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      padding: 0.5rem;
     }
 
     .settings-dropdown.open {
       opacity: 1;
       visibility: visible;
-      transform: translateY(0);
+      transform: translateY(0) scale(1);
     }
 
     .settings-dropdown button {
@@ -460,21 +481,23 @@
       padding: 0.75rem 1rem;
       background: none;
       border: none;
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.7rem;
-      font-weight: 500;
-      letter-spacing: 0.02em;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
       color: var(--fg);
       text-align: left;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 0.6rem;
-      transition: background 0.15s ease;
+      transition: all 0.15s ease;
+      border-radius: 10px;
     }
 
     .settings-dropdown button:hover {
-      background: var(--bg);
+      background: var(--accent-light);
+      color: var(--accent);
     }
 
     .settings-dropdown button svg {
@@ -508,13 +531,13 @@
     }
 
     .cost-stat-label {
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.75rem;
       color: var(--fg-muted);
     }
 
     .cost-stat-value {
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.9rem;
       font-weight: 500;
       color: var(--fg);
@@ -525,8 +548,8 @@
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(45, 42, 36, 0.4);
-      backdrop-filter: blur(4px);
+      background: rgba(45, 52, 54, 0.3);
+      backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -540,13 +563,13 @@
 
     .modal {
       background: var(--surface);
-      border-radius: 8px;
+      border-radius: 20px;
       width: 100%;
       max-width: 440px;
       max-height: 70vh;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.15);
     }
 
     .modal-header {
@@ -558,7 +581,7 @@
     }
 
     .modal-header h3 {
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.75rem;
       font-weight: 600;
       letter-spacing: 0.05em;
@@ -596,21 +619,22 @@
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      padding: 0.65rem 0.9rem;
+      padding: 0.75rem 1rem;
       background: var(--bg);
-      border: 1px solid transparent;
-      border-radius: 4px;
+      border: 2px solid transparent;
+      border-radius: 12px;
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
     }
 
     .voice-item:hover {
       background: var(--bg-warm);
+      transform: translateX(4px);
     }
 
     .voice-item.selected {
       border-color: var(--accent);
-      background: rgba(196, 90, 59, 0.1);
+      background: var(--accent-light);
     }
 
     .voice-radio {
@@ -642,7 +666,7 @@
     }
 
     .voice-name {
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.75rem;
       font-weight: 500;
       color: var(--fg);
@@ -652,7 +676,7 @@
     }
 
     .voice-lang {
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.6rem;
       color: var(--fg-muted);
       margin-top: 0.1rem;
@@ -662,19 +686,20 @@
       background: var(--surface);
       border: 1px solid var(--border);
       color: var(--fg-muted);
-      padding: 0.35rem 0.6rem;
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.6rem;
-      font-weight: 500;
-      border-radius: 3px;
+      padding: 0.4rem 0.75rem;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 600;
+      border-radius: 20px;
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.2s ease;
       flex-shrink: 0;
     }
 
     .voice-preview:hover {
-      border-color: var(--fg-muted);
-      color: var(--fg);
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
     }
 
     .voice-cloud-badge,
@@ -705,7 +730,7 @@
       gap: 0.4rem;
       background: none;
       border: none;
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.65rem;
       color: var(--link);
       cursor: pointer;
@@ -721,7 +746,7 @@
       padding: 0.75rem;
       background: var(--bg);
       border-radius: 4px;
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.65rem;
       line-height: 1.5;
       color: var(--fg-muted);
@@ -755,7 +780,7 @@
     }
 
     .current-voice-label {
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.65rem;
       color: var(--fg-muted);
       text-transform: uppercase;
@@ -763,7 +788,7 @@
     }
 
     .current-voice-name {
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.75rem;
       font-weight: 500;
       color: var(--fg);
@@ -791,14 +816,14 @@
     }
 
     .toggle-title {
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.75rem;
       font-weight: 500;
       color: var(--fg);
     }
 
     .toggle-desc {
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.6rem;
       color: var(--fg-muted);
     }
@@ -843,17 +868,18 @@
       bottom: 6rem;
       left: 50%;
       transform: translateX(-50%) translateY(20px);
-      background: var(--surface);
-      border: 1px solid var(--accent);
-      padding: 0.75rem 1.25rem;
-      font-family: 'IBM Plex Mono', monospace;
-      font-size: 0.75rem;
+      background: var(--accent-light);
+      border: 2px solid var(--accent);
+      padding: 0.85rem 1.5rem;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
       color: var(--accent);
       opacity: 0;
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       z-index: 200;
-      border-radius: 4px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      border-radius: 50px;
+      box-shadow: 0 6px 25px rgba(45, 155, 131, 0.2);
       pointer-events: none;
     }
 
@@ -904,17 +930,18 @@
     .message-group {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
-      max-width: 640px;
+      gap: 1.5rem;
+      max-width: 720px;
       width: 100%;
       margin: 0 auto;
     }
 
     .message {
-      font-family: 'Source Serif 4', Georgia, serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 1rem;
       line-height: 1.6;
       animation: messageIn 0.3s ease-out;
+      max-width: 85%;
     }
 
     @keyframes messageIn {
@@ -930,21 +957,25 @@
 
     .message.user {
       color: var(--fg);
-      background: var(--surface);
+      background: var(--bg-warm);
       padding: 1rem 1.25rem;
-      border-radius: 1rem;
-      border: 1px solid var(--border);
+      border-radius: 1.25rem 1.25rem 0.25rem 1.25rem;
+      border: none;
+      align-self: flex-end;
+      margin-left: auto;
     }
 
     .message.assistant {
       color: var(--fg);
+      align-self: flex-start;
+      margin-right: auto;
     }
 
     .message.assistant h1,
     .message.assistant h2,
     .message.assistant h3,
     .message.assistant h4 {
-      font-family: 'Source Serif 4', Georgia, serif;
+      font-family: 'DM Sans', sans-serif;
       font-weight: 500;
       margin: 0.75em 0 0.25em;
       line-height: 1.3;
@@ -984,7 +1015,7 @@
     }
 
     .message.assistant code {
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.9em;
       background: var(--bg-warm);
       padding: 0.15em 0.35em;
@@ -992,7 +1023,7 @@
     }
 
     .message.assistant pre {
-      font-family: 'IBM Plex Mono', monospace;
+      font-family: 'Nunito', sans-serif;
       font-size: 0.85em;
       background: var(--bg-warm);
       padding: 0.75em 1em;
@@ -1099,17 +1130,17 @@
       align-items: center;
       gap: 0.5rem;
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      box-shadow: 0 4px 24px rgba(45, 42, 36, 0.1);
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      border: 2px solid var(--border);
+      border-radius: 25px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       padding: 8px;
       padding-left: 0;
     }
 
     .text-input-wrapper:focus-within {
-      border-color: var(--fg-muted);
-      box-shadow: 0 6px 32px rgba(45, 42, 36, 0.15);
+      border-color: var(--accent);
+      box-shadow: 0 8px 35px rgba(45, 155, 131, 0.15);
     }
 
     .text-input {
@@ -1117,7 +1148,7 @@
       min-height: 36px;
       max-height: 160px;
       padding: 8px 0 8px 1rem;
-      font-family: 'Source Serif 4', Georgia, serif;
+      font-family: 'DM Sans', sans-serif;
       font-size: 1rem;
       line-height: 1.4;
       color: var(--fg);
@@ -1141,38 +1172,37 @@
 
     .text-send-btn {
       flex-shrink: 0;
-      width: 36px;
-      height: 36px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       border: none;
-      background: var(--fg);
+      background: var(--border);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s ease;
-      opacity: 0.4;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .text-send-btn:hover {
       transform: scale(1.05);
-      opacity: 0.8;
+      background: var(--fg-muted);
     }
 
     .text-send-btn.active {
-      opacity: 1;
-      background: var(--accent);
+      background: linear-gradient(135deg, var(--accent) 0%, #3DB896 100%);
+      box-shadow: 0 4px 15px rgba(45, 155, 131, 0.3);
     }
 
     .text-send-btn.active:hover {
-      transform: scale(1.08);
-      box-shadow: 0 2px 12px rgba(196, 90, 59, 0.3);
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(45, 155, 131, 0.4);
     }
 
     .text-send-btn svg {
-      width: 16px;
-      height: 16px;
-      stroke: var(--bg);
+      width: 18px;
+      height: 18px;
+      stroke: white;
       stroke-width: 2;
       fill: none;
     }
@@ -1383,12 +1413,42 @@
   <!-- Login Screen -->
   <div class="login-screen" id="loginScreen">
     <div class="logo">
-      <svg width="48" height="48" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="28" fill="none" stroke="var(--fg)" stroke-width="4" stroke-dasharray="120 60" stroke-linecap="round"/>
+      <svg width="180" height="180" viewBox="0 0 180 180">
+        <defs>
+          <!-- Twill weave diagonal pattern for mask -->
+          <pattern id="twill" patternUnits="userSpaceOnUse" width="4" height="4">
+            <polygon points="0,0 2,0 0,2" fill="white"/>
+            <polygon points="2,4 4,4 4,2" fill="white"/>
+          </pattern>
+          <mask id="weave">
+            <rect width="100%" height="100%" fill="url(#twill)"/>
+          </mask>
+          <!-- Tartan stripes pattern - zoomed in 1.5x (150 instead of 100) -->
+          <pattern id="tartan-h" patternUnits="userSpaceOnUse" width="150" height="150">
+            <rect y="0" width="150" height="36" fill="#3D3D3D"/>
+            <rect y="36" width="150" height="39" fill="#C94040"/>
+            <rect y="75" width="150" height="39" fill="#C94040"/>
+            <rect y="114" width="150" height="36" fill="#3D3D3D"/>
+          </pattern>
+          <pattern id="tartan-v" patternUnits="userSpaceOnUse" width="150" height="150">
+            <rect x="0" width="36" height="150" fill="#3D3D3D"/>
+            <rect x="36" width="39" height="150" fill="#C94040"/>
+            <rect x="75" width="39" height="150" fill="#C94040"/>
+            <rect x="114" width="36" height="150" fill="#3D3D3D"/>
+          </pattern>
+          <clipPath id="circle-clip">
+            <circle cx="90" cy="90" r="85"/>
+          </clipPath>
+        </defs>
+        <!-- Circle with tartan -->
+        <g clip-path="url(#circle-clip)">
+          <rect width="180" height="180" fill="url(#tartan-h)"/>
+          <rect width="180" height="180" fill="url(#tartan-v)" mask="url(#weave)"/>
+        </g>
+        <circle cx="90" cy="90" r="85" fill="none" stroke="#A33030" stroke-width="3"/>
+        <text x="90" y="102" text-anchor="middle" font-family="Nunito, sans-serif" font-size="50" font-weight="800" fill="#FDF8F4">spraff</text>
       </svg>
     </div>
-    <h1>Shy</h1>
-    <p>Private voice for AI</p>
     <button class="login-btn" id="loginBtn">Connect with OpenRouter</button>
   </div>
 
