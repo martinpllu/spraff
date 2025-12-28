@@ -1036,6 +1036,34 @@
       margin: 1em 0;
     }
 
+    .message.assistant .table-wrapper {
+      overflow-x: auto;
+      margin: 0.75em 0;
+    }
+
+    .message.assistant table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.95em;
+      min-width: max-content;
+    }
+
+    .message.assistant th,
+    .message.assistant td {
+      border: 1px solid var(--border);
+      padding: 0.5em 0.75em;
+      text-align: left;
+    }
+
+    .message.assistant th {
+      background: var(--bg-warm);
+      font-weight: 600;
+    }
+
+    .message.assistant tr:nth-child(even) {
+      background: rgba(0, 0, 0, 0.02);
+    }
+
     .message.streaming::after {
       content: '▊';
       animation: blink 0.8s steps(2) infinite;
@@ -1085,18 +1113,24 @@
 
     .text-input {
       flex: 1;
-      height: 36px;
+      min-height: 36px;
       max-height: 160px;
-      padding: 0 0 0 1rem;
+      padding: 8px 0 8px 1rem;
       font-family: 'Source Serif 4', Georgia, serif;
       font-size: 1rem;
-      line-height: 36px;
+      line-height: 1.4;
       color: var(--fg);
       background: transparent;
       border: none;
       resize: none;
       outline: none;
       field-sizing: content;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+
+    .text-input::-webkit-scrollbar {
+      display: none;
     }
 
     .text-input::placeholder {
@@ -1765,11 +1799,106 @@
 
       let html = text;
 
-      // Escape HTML first
-      html = html
+      // Helper to escape HTML
+      const escapeHtml = (str) => str
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
+
+      // Tables (before HTML escaping, so we can detect pipe characters)
+      // Process line by line to find table blocks
+      const tableInputLines = html.split('\n');
+      const processedLines = [];
+      let tableLines = [];
+
+      for (let i = 0; i < tableInputLines.length; i++) {
+        const line = tableInputLines[i].trim();
+        const isTableRow = line.startsWith('|') && line.endsWith('|');
+
+        if (isTableRow) {
+          tableLines.push(line);
+        } else {
+          // Process accumulated table lines if any
+          if (tableLines.length >= 2) {
+            const table = parseTable(tableLines, escapeHtml);
+            if (table) {
+              processedLines.push(table);
+            } else {
+              processedLines.push(...tableLines);
+            }
+          } else if (tableLines.length > 0) {
+            processedLines.push(...tableLines);
+          }
+          tableLines = [];
+          processedLines.push(tableInputLines[i]);
+        }
+      }
+
+      // Handle table at end of content
+      if (tableLines.length >= 2) {
+        const table = parseTable(tableLines, escapeHtml);
+        if (table) {
+          processedLines.push(table);
+        } else {
+          processedLines.push(...tableLines);
+        }
+      } else if (tableLines.length > 0) {
+        processedLines.push(...tableLines);
+      }
+
+      html = processedLines.join('\n');
+
+      function parseTable(rows, escape) {
+        if (rows.length < 2) return null;
+
+        // Check if second row is separator (|---|---|)
+        const separatorRow = rows[1];
+        if (!/^\|[\s\-:]+(\|[\s\-:]+)+\|$/.test(separatorRow)) return null;
+
+        let tableHtml = '<div class="table-wrapper"><table>';
+
+        // Header row
+        const headerCells = rows[0].split('|').slice(1, -1);
+        tableHtml += '<thead><tr>';
+        headerCells.forEach(cell => {
+          tableHtml += '<th>' + escape(cell.trim()) + '</th>';
+        });
+        tableHtml += '</tr></thead>';
+
+        // Body rows (skip header and separator)
+        if (rows.length > 2) {
+          tableHtml += '<tbody>';
+          for (let i = 2; i < rows.length; i++) {
+            const cells = rows[i].split('|').slice(1, -1);
+            tableHtml += '<tr>';
+            cells.forEach(cell => {
+              tableHtml += '<td>' + escape(cell.trim()) + '</td>';
+            });
+            tableHtml += '</tr>';
+          }
+          tableHtml += '</tbody>';
+        }
+
+        tableHtml += '</table></div>';
+        return tableHtml;
+      }
+
+      // Escape HTML for remaining content (but not the table HTML we just created)
+      html = html.replace(/^(?!<div|<\/div|<table|<\/table|<thead|<\/thead|<tbody|<\/tbody|<tr|<\/tr|<th|<\/th|<td|<\/td)(.*)$/gm, (match) => {
+        if (match.startsWith('<div') || match.startsWith('</div') ||
+            match.startsWith('<table') || match.startsWith('</table') ||
+            match.startsWith('<thead') || match.startsWith('</thead') ||
+            match.startsWith('<tbody') || match.startsWith('</tbody') ||
+            match.startsWith('<tr') || match.startsWith('</tr') ||
+            match.startsWith('<th') || match.startsWith('</th') ||
+            match.startsWith('<td') || match.startsWith('</td')) {
+          return match;
+        }
+        return match
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      });
 
       // Code blocks (must be before other processing)
       html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
@@ -1831,7 +1960,7 @@
         }
 
         // Check if line is already an HTML element
-        if (trimmed.match(/^<(h[1-4]|ul|ol|li|pre|blockquote|hr|p)/)) {
+        if (trimmed.match(/^<(h[1-4]|ul|ol|li|pre|blockquote|hr|p|table|thead|tbody|tr|th|td)/)) {
           processed.push(line);
           continue;
         }
