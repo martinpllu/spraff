@@ -1756,6 +1756,9 @@
         sessionStorage.removeItem('code_verifier');
         window.history.replaceState({}, document.title, window.location.pathname);
         showVoiceScreen();
+        updateSearchToggleUI();
+        updateModeUI();
+        setupEventListeners();
       } catch (error) {
         console.error('OAuth error:', error);
         showError('Authentication failed');
