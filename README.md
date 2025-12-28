@@ -1,6 +1,6 @@
 # Shy
 
-**A private, simple, self-hostable interface for AI.**
+**A private, subscription-free text and voice interface for AI.**
 
 Most AI chat interfaces require subscriptions, and your data is stored by AI labs or intermediaries. 
 
@@ -12,7 +12,7 @@ Shy gives you conversations that leave no trace. No transcripts, no history, not
 
 - **Private** - Zero Data Retention at every layer. No conversation history, no transcripts.
 - **Voice or text** - Talk or type, with streaming responses and markdown formatting.
-- **Simple and self-hostable** - One HTML file. Host it yourself or use it [here](https://martinpllu.github.io/shy/)
+- **Self-hostable** - One HTML file. Host it yourself or use it [here](https://martinpllu.github.io/shy/)
 - **No subscription** - Pay only for what you use via OpenRouter (fractions of a cent per conversation).
 - **Works everywhere** - Desktop and mobile, any modern browser.
 

@@ -999,6 +999,7 @@
       border-radius: 4px;
       overflow-x: auto;
       margin: 0.5em 0;
+      white-space: pre;
     }
 
     .message.assistant pre code {
@@ -1805,6 +1806,15 @@
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
 
+      // Code blocks - extract first and replace with placeholders
+      const codeBlocks = [];
+      html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+        const trimmed = code.replace(/^\n+|\n+$/g, '');
+        const placeholder = `\x00CODEBLOCK${codeBlocks.length}\x00`;
+        codeBlocks.push(`<pre><code>${escapeHtml(trimmed)}</code></pre>`);
+        return placeholder;
+      });
+
       // Tables (before HTML escaping, so we can detect pipe characters)
       // Process line by line to find table blocks
       const tableInputLines = html.split('\n');
@@ -1900,11 +1910,6 @@
           .replace(/>/g, '&gt;');
       });
 
-      // Code blocks (must be before other processing)
-      html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
-        return `<pre><code>${code.trim()}</code></pre>`;
-      });
-
       // Inline code (must be before other inline processing)
       html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
@@ -1985,6 +1990,12 @@
       // Clean up empty paragraphs and normalize
       html = html.replace(/<p><\/p>/g, '');
       html = html.replace(/\n+/g, '\n');
+
+      // Restore code blocks from placeholders
+      codeBlocks.forEach((block, i) => {
+        html = html.replace(`\x00CODEBLOCK${i}\x00`, block);
+        html = html.replace(`<p>\x00CODEBLOCK${i}\x00</p>`, block);
+      });
 
       return html;
     }
