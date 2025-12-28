@@ -1,16 +1,16 @@
 # Spraff
 
-**One HTML file. Private AI chat. Pay as you go.**
+**Simple, private AI chat**
 
-No backend, no subscription, no data stored. Host it yourself or use it [here](https://martinpllu.github.io/spraff/).
+No subscription, no data stored. Host it yourself or use it [here](https://martinpllu.github.io/spraff/).
 
 *Uses [OpenRouter](https://openrouter.ai) for private, pay-per-use AI access.*
 
 ## Features
 
 - **Private** - Zero Data Retention everywhere. Nothing saved, ever.
-- **Voice or text** - Talk or type. Responses stream back with markdown support.
-- **Self-hostable** - It's one HTML file. Host it yourself or use it [here](https://martinpllu.github.io/spraff/)
+- **Voice or text** - Speak and listen or type and read.
+- **Self-hostable** - Single HTML file. Host it yourself or use it [here](https://martinpllu.github.io/spraff/)
 - **No subscription** - Pay per conversation via OpenRouter (fractions of a cent each).
 - **Works everywhere** - Desktop, mobile, any modern browser.
 
@@ -30,10 +30,6 @@ There's no backend - it's just a static HTML file. Your conversations go through
 
 No history, no transcripts, no record of what you said.
 
-## How it Works
-
-Voice mode: speak, get a spoken response. Text mode: type, get a streamed response with markdown. That's it.
-
 ## Voice Quality
 
 Spraff uses your device's built-in text-to-speech rather than cloud voices (like OpenAI or ElevenLabs). Why? Cloud voices send your conversations to servers that don't offer zero data retention (and they cost extra).
@@ -42,12 +38,17 @@ Default system voices can sound a bit robotic, but you can download better ones 
 
 - **macOS**: System Settings → Accessibility → Spoken Content → System Voice → Manage Voices
 - **iOS**: Settings → Accessibility → Spoken Content → Voices → [Your Language]
+- **Windows**: Settings → Time & Language → Speech → Manage voices
+- **Android**: Settings → Accessibility → Text-to-speech output → Preferred engine settings
+- **Linux**: Install `espeak-ng` or `festival` for basic voices, or `piper` for neural voices
+
+*(Settings locations vary between OS versions.)*
 
 Look for **Premium** or **Enhanced** voices - they're high-quality neural voices that run locally.
 
 ## Cost
 
-Spraff uses Gemini Flash 3, which is fast and cheap. Most conversations cost a fraction of a cent (a couple of cents with web search). A few dollars of OpenRouter credit goes a long way.
+Spraff uses Gemini Flash 3, which is fast and cheap. Most conversations cost a fraction of a cent (though requests with web search cost a couple of cents each). A few dollars of OpenRouter credit goes a long way.
 
 ## Getting Started
 
