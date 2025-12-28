@@ -2954,6 +2954,7 @@ Be concise and direct in your responses. Focus on being helpful and informative.
           textInput.value = '';
           textInput.style.height = 'auto';
           textSendBtn.classList.remove('active');
+          textInput.blur(); // Hide keyboard on mobile
           sendTextToAPI(text);
         }
       }
