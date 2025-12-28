@@ -15,7 +15,7 @@ No backend, no subscription, no data stored. Host it yourself or use it [here](h
 - **Works everywhere** - Desktop, mobile, any modern browser.
 
 <p align="center">
-  <img src="docs/spraff-1.png" height="350" alt="Spraff voice mode" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="docs/spraff-2.png" height="350" alt="Spraff text mode" />
+  <img src="docs/spraff-1.png" height="525" alt="Spraff voice mode" />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="docs/spraff-2.png" height="525" alt="Spraff text mode" />
 </p>
 
 ## Privacy
