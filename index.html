@@ -1354,6 +1354,7 @@
       border: 2px solid var(--border);
       border-radius: 14px;
       box-shadow: var(--shadow-sm);
+      cursor: pointer;
     }
 
     .mode-btn {
@@ -1813,6 +1814,7 @@
     const textInputContainer = document.getElementById('textInputContainer');
     const textInput = document.getElementById('textInput');
     const textSendBtn = document.getElementById('textSendBtn');
+    const modeToggle = document.getElementById('modeToggle');
     const voiceModeBtn = document.getElementById('voiceModeBtn');
     const textModeBtn = document.getElementById('textModeBtn');
     const conversationHistoryEl = document.getElementById('conversationHistory');
@@ -3382,9 +3384,8 @@ Be concise and direct in your responses. Focus on being helpful and informative.
       // Also try immediately in case voices are already loaded
       initDefaultVoice();
 
-      // Mode switching
-      voiceModeBtn.addEventListener('click', () => setTextMode(false));
-      textModeBtn.addEventListener('click', () => setTextMode(true));
+      // Mode switching - click anywhere in the toggle container to switch
+      modeToggle.addEventListener('click', () => setTextMode(!textMode));
 
       // New chat
       newChatBtn.addEventListener('click', startNewChat);
