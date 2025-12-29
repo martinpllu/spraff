@@ -32,7 +32,7 @@ There's no backend - it's just a static HTML file. Your conversations go through
 
 ## Cost
 
-Most conversations cost a fraction of a cent, though requests with web search cost a couple of cents each. 
+Most conversations cost a fraction of a cent ([model pricing](https://openrouter.ai/google/gemini-3-flash-preview)), though requests with web search cost a couple of cents each ([web search pricing](https://openrouter.ai/docs/guides/features/plugins/web-search)).
 
 ## Voice Quality
 
