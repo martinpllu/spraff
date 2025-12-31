@@ -34,7 +34,15 @@ There's no backend - it's just a static HTML file. Your conversations go through
 
 Most conversations cost a fraction of a cent ([model pricing](https://openrouter.ai/google/gemini-3-flash-preview)), though requests with web search cost a couple of cents each ([web search pricing](https://openrouter.ai/docs/guides/features/plugins/web-search)).
 
-## Voice Quality
+## Voice Input
+
+Your voice is recorded in the browser via the Web Audio API, converted to 16kHz mono WAV, and sent directly to the AI model. Audio is downsampled from 48kHz to reduce upload size - this is optimal for speech since Gemini downsamples to 16kHz anyway.
+
+- If an upload is interrupted (e.g. you switch apps), it's saved locally and automatically retried when you return
+- Upload progress is shown for larger recordings
+- You can check the size of your last voice message in the Cost panel
+
+## Voice Output
 
 Spraff uses your device's built-in text-to-speech rather than cloud voices (like OpenAI or ElevenLabs). Why? Cloud voices send your conversations to servers that don't offer zero data retention (and they cost extra).
 

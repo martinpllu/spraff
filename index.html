@@ -2764,30 +2764,55 @@
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const arrayBuffer = await audioBlob.arrayBuffer();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      const wavBuffer = audioBufferToWav(audioBuffer);
+
+      // Downsample to 16kHz for speech (Gemini downsamples anyway, saves bandwidth)
+      const targetSampleRate = 16000;
+      const resampledBuffer = await resampleAudio(audioContext, audioBuffer, targetSampleRate);
+
+      const wavBuffer = audioBufferToWav(resampledBuffer, targetSampleRate);
       return new Blob([wavBuffer], { type: 'audio/wav' });
     }
 
-    function audioBufferToWav(buffer) {
-      const numChannels = buffer.numberOfChannels;
-      const sampleRate = buffer.sampleRate;
-      const format = 1;
-      const bitDepth = 16;
-
-      let interleaved;
-      if (numChannels === 2) {
-        const left = buffer.getChannelData(0);
-        const right = buffer.getChannelData(1);
-        interleaved = new Float32Array(left.length + right.length);
-        for (let i = 0, j = 0; i < left.length; i++, j += 2) {
-          interleaved[j] = left[i];
-          interleaved[j + 1] = right[i];
-        }
-      } else {
-        interleaved = buffer.getChannelData(0);
+    async function resampleAudio(audioContext, audioBuffer, targetSampleRate) {
+      // If already at or below target rate, just return mono version
+      if (audioBuffer.sampleRate <= targetSampleRate) {
+        return audioBuffer;
       }
 
-      const dataLength = interleaved.length * (bitDepth / 8);
+      // Create offline context at target sample rate
+      const numSamples = Math.round(audioBuffer.duration * targetSampleRate);
+      const offlineContext = new OfflineAudioContext(1, numSamples, targetSampleRate);
+
+      // Create buffer source
+      const source = offlineContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(offlineContext.destination);
+      source.start(0);
+
+      // Render resampled audio
+      return await offlineContext.startRendering();
+    }
+
+    function audioBufferToWav(buffer, targetSampleRate) {
+      const sampleRate = targetSampleRate || buffer.sampleRate;
+      const format = 1;
+      const bitDepth = 16;
+      const numChannels = 1; // Always mono for speech
+
+      // Get mono audio data (mix down if stereo)
+      let samples;
+      if (buffer.numberOfChannels === 2) {
+        const left = buffer.getChannelData(0);
+        const right = buffer.getChannelData(1);
+        samples = new Float32Array(left.length);
+        for (let i = 0; i < left.length; i++) {
+          samples[i] = (left[i] + right[i]) / 2;
+        }
+      } else {
+        samples = buffer.getChannelData(0);
+      }
+
+      const dataLength = samples.length * (bitDepth / 8);
       const wavBuffer = new ArrayBuffer(44 + dataLength);
       const view = new DataView(wavBuffer);
 
@@ -2805,8 +2830,8 @@
       writeString(view, 36, 'data');
       view.setUint32(40, dataLength, true);
 
-      for (let i = 0; i < interleaved.length; i++) {
-        const sample = Math.max(-1, Math.min(1, interleaved[i]));
+      for (let i = 0; i < samples.length; i++) {
+        const sample = Math.max(-1, Math.min(1, samples[i]));
         view.setInt16(44 + i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
       }
 
