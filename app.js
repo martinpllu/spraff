@@ -111,7 +111,7 @@
     const SILENCE_THRESHOLD = 0.7; // Audio level below which we consider silence (above typical background ~0.5)
     const SPEECH_THRESHOLD = 1.0; // Audio level above which we consider speech
     const INTERRUPT_THRESHOLD = 2.5; // Higher threshold for interrupting TTS (must speak louder)
-    const SILENCE_TIMEOUT = 1500; // 1.5 seconds of silence before auto-submit
+    const SILENCE_TIMEOUT = 1000; // 1 second of silence before auto-submit
     const AUTO_MODE_COOLDOWN = 800; // Cooldown after TTS stops before listening again
 
     // Stats
