@@ -146,7 +146,7 @@
     const voiceModeBtn = document.getElementById('voiceModeBtn');
     const textModeBtn = document.getElementById('textModeBtn');
     const conversationHistoryEl = document.getElementById('conversationHistory');
-    const newChatBtn = document.getElementById('newChatBtn');
+    const clearChatBtn = document.getElementById('clearChatBtn');
 
     // ============ Initialization ============
     function init() {
@@ -165,7 +165,6 @@
       }
 
       updateModeUI();
-      updateNewChatButton();
       setupEventListeners();
       lockOrientation();
       checkPendingVoiceMessage();
@@ -664,16 +663,8 @@
       stats.sessionCost = 0;
       stats.lastCost = 0;
       stats.lastVoiceSize = 0;
-      updateNewChatButton();
     }
 
-    function updateNewChatButton() {
-      if (conversationHistory.length > 0) {
-        newChatBtn.classList.remove('hidden');
-      } else {
-        newChatBtn.classList.add('hidden');
-      }
-    }
 
     // ============ Mode Switching ============
     function updateModeUI() {
@@ -1427,8 +1418,7 @@ Respond naturally as if having a spoken conversation.`;
             conversationHistory.push({ role: 'user', content: userTranscript });
             conversationHistory.push({ role: 'assistant', content: searchResult.fullResponse });
             saveConversationHistory();
-            updateNewChatButton();
-          } catch (searchError) {
+                } catch (searchError) {
             console.error('Web search error:', searchError);
             showError('Web search failed: ' + searchError.message);
             setButtonState('ready');
@@ -1454,8 +1444,7 @@ Respond naturally as if having a spoken conversation.`;
           conversationHistory.push({ role: 'user', content: userTranscript || '[voice message]' });
           conversationHistory.push({ role: 'assistant', content: responseOnly });
           saveConversationHistory();
-          updateNewChatButton();
-        }
+            }
 
       } catch (error) {
         showUploadProgress(false);
@@ -1647,8 +1636,7 @@ Be concise and direct in your responses. Focus on being helpful and informative.
             conversationHistory.push({ role: 'user', content: userText });
             conversationHistory.push({ role: 'assistant', content: searchResult.fullResponse });
             saveConversationHistory();
-            updateNewChatButton();
-          } catch (searchError) {
+                } catch (searchError) {
             console.error('Web search error:', searchError);
             showError('Web search failed: ' + searchError.message);
             finishStreamingMessage();
@@ -1665,8 +1653,7 @@ Be concise and direct in your responses. Focus on being helpful and informative.
           conversationHistory.push({ role: 'user', content: userText });
           conversationHistory.push({ role: 'assistant', content: fullResponse });
           saveConversationHistory();
-          updateNewChatButton();
-        }
+            }
 
       } catch (error) {
         console.error('API error:', error);
@@ -2204,10 +2191,17 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         settingsDropdown.classList.toggle('open');
       });
 
+      const settingsSubmenu = document.getElementById('settingsSubmenu');
+
       // Close dropdown when clicking outside
       document.addEventListener('click', (e) => {
-        if (!settingsDropdown.contains(e.target) && e.target !== settingsMenuBtn) {
+        if (!settingsDropdown.contains(e.target) && !settingsSubmenu.contains(e.target) && e.target !== settingsMenuBtn) {
           settingsDropdown.classList.remove('open');
+          settingsSubmenu.classList.remove('open');
+          // Reset clear chat confirmation state
+          clearChatBtn.classList.remove('confirming');
+          const clearText = clearChatBtn.querySelector('.clear-chat-text');
+          if (clearText) clearText.textContent = 'Clear chat';
         }
       });
 
@@ -2297,8 +2291,42 @@ Be concise and direct in your responses. Focus on being helpful and informative.
       // Mode switching - click anywhere in the toggle container to switch
       modeToggle.addEventListener('click', () => setTextMode(!textMode));
 
-      // New chat
-      newChatBtn.addEventListener('click', startNewChat);
+      // Settings submenu
+      const settingsSubmenuBtn = document.getElementById('settingsSubmenuBtn');
+
+      settingsSubmenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        settingsSubmenu.classList.toggle('open');
+      });
+
+      // Close submenu when clicking submenu items
+      settingsSubmenu.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          settingsSubmenu.classList.remove('open');
+          settingsDropdown.classList.remove('open');
+        });
+      });
+
+      // Clear chat with inline confirmation
+      let clearChatConfirming = false;
+      const clearChatText = clearChatBtn.querySelector('.clear-chat-text');
+
+      clearChatBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (clearChatConfirming) {
+          // Second click - actually clear
+          settingsDropdown.classList.remove('open');
+          startNewChat();
+          clearChatConfirming = false;
+          clearChatBtn.classList.remove('confirming');
+          clearChatText.textContent = 'Clear chat';
+        } else {
+          // First click - show confirmation
+          clearChatConfirming = true;
+          clearChatBtn.classList.add('confirming');
+          clearChatText.textContent = 'Clear chat?';
+        }
+      });
 
       // Text input handling
       textInput.addEventListener('input', () => {

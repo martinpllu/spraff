@@ -215,17 +215,6 @@ body {
   z-index: 40;
 }
 
-.voice-screen.text-mode::after {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 100px;
-  background: linear-gradient(to top, transparent, var(--bg) 70%);
-  pointer-events: none;
-  z-index: 40;
-}
 
 /* The Button - Central Control */
 .button-container {
@@ -420,19 +409,34 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-/* Bottom Controls */
-.bottom-controls {
+/* Bottom Bar - flexbox container for menu, actions, toggle */
+.bottom-bar {
   position: fixed;
-  bottom: 2rem;
+  bottom: 1.25rem;
   left: 50%;
   transform: translateX(-50%);
+  width: calc(100% - 3rem);
+  max-width: 580px;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  justify-content: space-between;
   z-index: 50;
 }
 
-.control-pill {
+.bottom-bar-left,
+.bottom-bar-right {
+  flex: 0 0 auto;
+}
+
+.bottom-bar-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.action-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -451,20 +455,12 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-.control-pill:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+.action-btn:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
-.control-pill.active {
-  border-color: var(--accent);
-  background: var(--accent-light);
-  color: var(--accent);
-}
-
-.control-pill svg {
+.action-btn svg {
   width: 16px;
   height: 16px;
   stroke: currentColor;
@@ -472,82 +468,39 @@ body {
   fill: none;
 }
 
-.control-pill.hidden {
+.action-btn.hidden {
   display: none;
 }
 
-/* Stop button special styling */
-.stop-pill {
+/* Stop button - orange styling */
+#stopBtn {
   border-color: var(--secondary);
   color: var(--secondary);
   background: rgba(249, 115, 22, 0.1);
 }
 
-.stop-pill:hover {
+#stopBtn:hover {
   background: rgba(249, 115, 22, 0.2);
   border-color: var(--secondary);
   color: var(--secondary);
 }
 
-/* Cancel button styling */
-.cancel-pill {
-  border-color: var(--fg-muted);
-  color: var(--fg-muted);
-  background: var(--surface);
+/* Cancel button - same orange as stop */
+#cancelBtn {
+  border-color: var(--secondary);
+  color: var(--secondary);
+  background: rgba(249, 115, 22, 0.1);
 }
 
-.cancel-pill:hover {
-  background: var(--bg-warm);
-  border-color: var(--fg);
-  color: var(--fg);
+#cancelBtn:hover {
+  background: rgba(249, 115, 22, 0.2);
+  border-color: var(--secondary);
+  color: var(--secondary);
 }
 
-/* New chat button - top left, aligned with content */
-.new-chat-btn {
-  position: fixed;
-  top: 1.5rem;
-  left: max(1.5rem, calc(50% - 360px));
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  border: 2px solid var(--border);
-  background: var(--surface);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  z-index: 100;
-  box-shadow: var(--shadow-sm);
-}
-
-.new-chat-btn:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.new-chat-btn svg {
-  width: 20px;
-  height: 20px;
-  stroke: var(--fg-muted);
-  stroke-width: 2.5;
-  fill: none;
-}
-
-.new-chat-btn:hover svg {
-  stroke: var(--accent);
-}
-
-.new-chat-btn.hidden {
-  display: none;
-}
-
-/* Settings menu - top right, aligned with content */
+/* Settings menu - inside bottom bar */
 .settings-menu {
-  position: fixed;
-  top: 1.5rem;
-  right: max(1.5rem, calc(50% - 360px));
+  position: relative;
   z-index: 100;
 }
 
@@ -556,7 +509,7 @@ body {
 }
 
 .settings-menu-btn {
-  padding: 0.6rem 1rem;
+  padding: 0.65rem 1rem;
   border-radius: 14px;
   border: 2px solid var(--border);
   background: var(--surface);
@@ -586,9 +539,9 @@ body {
 /* Settings dropdown */
 .settings-dropdown {
   position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 0.5rem;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 0.5rem;
   background: var(--surface);
   border: 2px solid var(--border);
   border-radius: 16px;
@@ -597,7 +550,7 @@ body {
   overflow: hidden;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-8px) scale(0.95);
+  transform: translateY(8px) scale(0.95);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0.5rem;
 }
@@ -641,6 +594,89 @@ body {
 }
 
 .settings-dropdown .divider {
+  height: 2px;
+  background: var(--border);
+}
+
+/* Settings submenu button */
+.settings-dropdown button.has-submenu {
+  justify-content: flex-start;
+}
+
+.settings-dropdown button.has-submenu .chevron {
+  margin-left: auto;
+  stroke: var(--fg-muted);
+  stroke-width: 2;
+  fill: none;
+}
+
+/* Clear chat confirmation state */
+.settings-dropdown button#clearChatBtn.confirming {
+  background: var(--error, #ef4444);
+  color: white;
+}
+
+.settings-dropdown button#clearChatBtn.confirming svg {
+  stroke: white;
+}
+
+/* Settings submenu */
+.settings-submenu {
+  position: absolute;
+  bottom: 0;
+  left: 100%;
+  margin-left: 0.5rem;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  min-width: 160px;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-8px) scale(0.95);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0.5rem;
+}
+
+.settings-submenu.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0) scale(1);
+}
+
+.settings-submenu button {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  background: none;
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  transition: all 0.15s ease;
+  border-radius: 12px;
+}
+
+.settings-submenu button:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.settings-submenu button svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--fg-muted);
+  stroke-width: 2;
+  fill: none;
+}
+
+.settings-submenu .divider {
   height: 2px;
   background: var(--border);
 }
@@ -1046,7 +1082,7 @@ body {
   position: fixed;
   inset: 0;
   overflow-y: auto;
-  padding: 5.5rem 1.5rem 12rem;
+  padding: 1.5rem 1.5rem 12rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -1462,25 +1498,14 @@ body {
     display: none;
   }
 
-  .bottom-controls {
-    bottom: 1.5rem;
+  .bottom-bar {
+    bottom: 1.25rem;
+    width: calc(100% - 2rem);
   }
 
   .cost-display {
     left: 1rem;
     font-size: 0.7rem;
-  }
-
-  .settings-menu {
-    top: 1rem;
-    right: 1rem;
-  }
-
-  .new-chat-btn {
-    top: 1rem;
-    left: 1rem;
-    width: 40px;
-    height: 40px;
   }
 
   .text-input-container {
@@ -1493,16 +1518,11 @@ body {
   }
 
   .conversation-history {
-    padding: 5rem 1rem 10rem;
+    padding: 1rem 1rem 10rem;
   }
 
   .message {
     font-size: 1rem;
-  }
-
-  .control-pill {
-    padding: 0.6rem 0.9rem;
-    font-size: 0.75rem;
   }
 }
 
