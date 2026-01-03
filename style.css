@@ -389,7 +389,7 @@ body {
   font-weight: 500;
   color: var(--fg-muted);
   opacity: 0.7;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .hint-text.hidden {
@@ -1309,16 +1309,19 @@ body {
   position: fixed;
   bottom: 5.5rem;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateX(10%);
   width: calc(100% - 3rem);
   max-width: 580px;
-  display: none;
+  opacity: 0;
+  visibility: hidden;
   z-index: 50;
-  transition: bottom 0.15s ease-out;
+  transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease, bottom 0.15s ease-out;
 }
 
 .text-input-container.visible {
-  display: block;
+  transform: translateX(-50%) translateX(0);
+  opacity: 1;
+  visibility: visible;
 }
 
 .text-input-wrapper {
@@ -1473,6 +1476,7 @@ body {
 /* Text mode adjustments */
 .voice-screen.text-mode .hint-text {
   opacity: 0;
+  transform: translateX(-50%) translateX(-30%);
   pointer-events: none;
 }
 
