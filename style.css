@@ -323,21 +323,6 @@ body {
   box-shadow: 0 8px 32px rgba(249, 115, 22, 0.4);
 }
 
-/* Auto-listening mode - pulsing ring */
-.main-button.auto-listening {
-  background: var(--accent);
-  animation: auto-pulse 2s ease-in-out infinite;
-}
-
-@keyframes auto-pulse {
-  0%, 100% {
-    box-shadow: var(--shadow-lg), 0 0 0 0 rgba(79, 70, 229, 0.5);
-  }
-  50% {
-    box-shadow: var(--shadow-lg), 0 0 0 16px rgba(79, 70, 229, 0);
-  }
-}
-
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -364,10 +349,6 @@ body {
 
 .status-text.speaking {
   color: var(--secondary);
-}
-
-.status-text.auto-listening {
-  color: var(--accent);
 }
 
 /* Upload progress bar */
@@ -1473,13 +1454,6 @@ body {
 
   .hint-text {
     display: none;
-  }
-
-  /* Show hint on mobile when in auto-listening mode */
-  .voice-screen:has(.main-button.auto-listening) .hint-text {
-    display: block;
-    bottom: 80px;
-    font-size: 0.85rem;
   }
 
   .bottom-controls {

@@ -97,24 +97,6 @@
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     let currentStreamingElement = null;
 
-    // Auto-mode (voice activity detection)
-    let autoMode = localStorage.getItem('autoMode') === 'true';
-    let autoModeAudioContext = null;
-    let autoModeAnalyser = null;
-    let autoModeStream = null;
-    let autoModeMonitorInterval = null;
-    let silenceTimer = null;
-    let isAutoRecording = false;
-    let hasSpeechStarted = false;
-    let autoModeCooldown = false; // Prevents picking up TTS audio after speaking
-    let interruptionsEnabledThisTurn = true; // Disabled per-turn if we detect audio bleed from speakers
-    let bleedCheckDoneThisTurn = false; // Only check for bleed once per response turn
-    const SILENCE_THRESHOLD = 0.7; // Audio level below which we consider silence (above typical background ~0.5)
-    const SPEECH_THRESHOLD = 1.0; // Audio level above which we consider speech
-    const INTERRUPT_THRESHOLD = 2.5; // Higher threshold for interrupting TTS (must speak louder)
-    const SILENCE_TIMEOUT = 1000; // 1 second of silence before auto-submit
-    const AUTO_MODE_COOLDOWN = 800; // Cooldown after TTS stops before listening again
-
     // Stats
     const stats = {
       sessionCost: 0,
@@ -187,18 +169,6 @@
       setupEventListeners();
       lockOrientation();
       checkPendingVoiceMessage();
-      restoreAutoMode();
-    }
-
-    // ============ Auto Mode Restoration ============
-    function restoreAutoMode() {
-      // Only restore if we have an API key and auto mode was enabled
-      if (apiKey && autoMode && !textMode) {
-        // Small delay to let the UI settle
-        setTimeout(() => {
-          startAutoMode();
-        }, 500);
-      }
     }
 
     // ============ Pending Voice Message Recovery ============
@@ -317,24 +287,17 @@
     }
 
     function setButtonState(state) {
-      mainButton.classList.remove('listening', 'processing', 'speaking', 'auto-listening');
-      statusText.classList.remove('listening', 'speaking', 'auto-listening');
+      mainButton.classList.remove('listening', 'processing', 'speaking');
+      statusText.classList.remove('listening', 'speaking');
 
       switch (state) {
         case 'listening':
           mainButton.classList.add('listening');
           statusText.classList.add('listening');
           statusText.textContent = 'Listening';
-          hintText.textContent = 'Push to send';
+          hintText.textContent = 'Push button or Space to send';
           hintText.classList.remove('hidden');
           cancelBtn.classList.remove('hidden');
-          break;
-        case 'auto-listening':
-          mainButton.classList.add('auto-listening');
-          statusText.classList.add('auto-listening');
-          statusText.textContent = 'Auto mode';
-          cancelBtn.classList.add('hidden');
-          // Don't hide hint - it shows how to exit
           break;
         case 'processing':
           mainButton.classList.add('processing');
@@ -351,7 +314,7 @@
           break;
         default:
           statusText.textContent = 'Ready';
-          hintText.textContent = 'Double-tap for auto mode, or tap to speak';
+          hintText.textContent = 'Push button or Space to speak';
           hintText.classList.remove('hidden');
           cancelBtn.classList.add('hidden');
       }
@@ -727,14 +690,6 @@
     function setTextMode(enabled) {
       textMode = enabled;
       localStorage.setItem('textMode', enabled);
-
-      // Disable auto mode when switching to text mode
-      if (enabled && autoMode) {
-        autoMode = false;
-        localStorage.setItem('autoMode', 'false');
-        stopAutoMode();
-      }
-
       updateModeUI();
     }
 
@@ -975,332 +930,6 @@
         mediaRecorder.stop();
       }
       isListening = false;
-    }
-
-    // ============ Auto Mode (Voice Activity Detection) ============
-    function toggleAutoMode() {
-      // Don't allow auto mode in text mode
-      if (textMode) {
-        return;
-      }
-
-      autoMode = !autoMode;
-      localStorage.setItem('autoMode', autoMode);
-
-      if (autoMode) {
-        startAutoMode();
-      } else {
-        stopAutoMode();
-      }
-    }
-
-    async function startAutoMode() {
-      try {
-        // Stop any current speaking
-        if (isSpeaking || speechQueue.length > 0) {
-          stopSpeaking();
-        }
-
-        // Get microphone access
-        const constraints = {
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          }
-        };
-
-        autoModeStream = await navigator.mediaDevices.getUserMedia(constraints);
-
-        // iOS Safari: unlock audio context on user gesture
-        if (!window.audioUnlocked) {
-          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          const buffer = audioCtx.createBuffer(1, 1, 22050);
-          const source = audioCtx.createBufferSource();
-          source.buffer = buffer;
-          source.connect(audioCtx.destination);
-          source.start(0);
-          if (window.speechSynthesis) {
-            const unlockUtterance = new SpeechSynthesisUtterance(' ');
-            unlockUtterance.volume = 0.01;
-            speechSynthesis.speak(unlockUtterance);
-          }
-          window.audioUnlocked = true;
-        }
-
-        // Set up audio analyser for VAD
-        autoModeAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-        console.log('[Auto Mode] AudioContext created, state:', autoModeAudioContext.state, 'sampleRate:', autoModeAudioContext.sampleRate);
-
-        // Resume AudioContext if suspended (required by browsers for user gesture)
-        if (autoModeAudioContext.state === 'suspended') {
-          await autoModeAudioContext.resume();
-          console.log('[Auto Mode] AudioContext resumed, state:', autoModeAudioContext.state);
-        }
-
-        // Check stream tracks
-        const tracks = autoModeStream.getAudioTracks();
-        console.log('[Auto Mode] Audio tracks:', tracks.length, 'enabled:', tracks[0]?.enabled, 'muted:', tracks[0]?.muted);
-
-        const source = autoModeAudioContext.createMediaStreamSource(autoModeStream);
-        autoModeAnalyser = autoModeAudioContext.createAnalyser();
-        autoModeAnalyser.fftSize = 2048; // Larger FFT for better resolution
-        autoModeAnalyser.smoothingTimeConstant = 0.3;
-        source.connect(autoModeAnalyser);
-        console.log('[Auto Mode] Analyser connected, fftSize:', autoModeAnalyser.fftSize);
-
-        // Start monitoring for speech
-        hasSpeechStarted = false;
-        isAutoRecording = false;
-        startVoiceActivityMonitoring();
-
-        setButtonState('auto-listening');
-        hintText.textContent = 'Tap to exit auto mode';
-        hintText.classList.remove('hidden');
-
-      } catch (error) {
-        console.error('Auto mode error:', error);
-        showError('Could not start auto mode');
-        autoMode = false;
-        localStorage.setItem('autoMode', 'false');
-        setButtonState('ready');
-      }
-    }
-
-    function stopAutoMode() {
-      // Stop monitoring
-      if (autoModeMonitorInterval) {
-        clearInterval(autoModeMonitorInterval);
-        autoModeMonitorInterval = null;
-      }
-
-      // Clear silence timer
-      if (silenceTimer) {
-        clearTimeout(silenceTimer);
-        silenceTimer = null;
-      }
-
-      // Stop any active recording
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        // We need to prevent the normal onstop handler from restarting auto mode
-        isAutoRecording = false;
-        mediaRecorder.stop();
-      }
-
-      // Clean up audio context
-      if (autoModeAudioContext) {
-        autoModeAudioContext.close();
-        autoModeAudioContext = null;
-        autoModeAnalyser = null;
-      }
-
-      // Clean up stream
-      if (autoModeStream) {
-        autoModeStream.getTracks().forEach(track => track.stop());
-        autoModeStream = null;
-      }
-
-      hasSpeechStarted = false;
-      isAutoRecording = false;
-      isListening = false;
-
-      // Reset hint text
-      hintText.textContent = 'Double-tap for auto mode, or tap to speak';
-
-      setButtonState('ready');
-    }
-
-    function getAudioLevel() {
-      if (!autoModeAnalyser) return 0;
-
-      // Use time-domain data for more reliable voice detection
-      const dataArray = new Uint8Array(autoModeAnalyser.fftSize);
-      autoModeAnalyser.getByteTimeDomainData(dataArray);
-
-      // Calculate RMS (root mean square) for audio level
-      let sum = 0;
-      for (let i = 0; i < dataArray.length; i++) {
-        const sample = (dataArray[i] - 128) / 128; // Normalize to -1 to 1
-        sum += sample * sample;
-      }
-      const rms = Math.sqrt(sum / dataArray.length);
-
-      // Scale to 0-100 range for easier threshold comparison
-      return rms * 100;
-    }
-
-    function startVoiceActivityMonitoring() {
-      console.log('[Auto Mode] Starting voice activity monitoring');
-      let logCounter = 0;
-
-      autoModeMonitorInterval = setInterval(() => {
-        if (!autoMode) return;
-
-        const level = getAudioLevel();
-
-        // Log level periodically for debugging
-        logCounter++;
-        if (logCounter % 10 === 0) { // Every 1 second
-          console.log('[Auto Mode] Audio level:', level.toFixed(2), 'threshold:', SPEECH_THRESHOLD, 'recording:', isAutoRecording, 'cooldown:', autoModeCooldown);
-        }
-
-        // Update visual audio level indicator
-        updateAutoModeVisual(level);
-
-        // Don't start new recordings while speaking, processing, in cooldown, etc.
-        const isAssistantBusy = isSpeaking || speechQueue.length > 0;
-        const isProcessing = mainButton.classList.contains('processing');
-
-        // Check for interruption - user must speak LOUDER to interrupt (higher threshold)
-        // Only enabled if no audio bleed detected this turn (e.g., using headphones)
-        if (isAssistantBusy && interruptionsEnabledThisTurn && level > INTERRUPT_THRESHOLD) {
-          console.log('[Auto Mode] *** INTERRUPTION *** level:', level);
-          stopSpeaking();
-          // Start cooldown then record
-          autoModeCooldown = true;
-          setTimeout(() => {
-            autoModeCooldown = false;
-            if (autoMode && !isAutoRecording && !isSpeaking) {
-              startAutoRecording();
-            }
-          }, 300);
-          return;
-        }
-
-        // Skip normal monitoring while assistant is speaking (prevents TTS pickup)
-        if (isAssistantBusy) {
-          return;
-        }
-
-        if (!isAutoRecording && !isProcessing && !autoModeCooldown) {
-          // Not currently recording - look for speech to start
-          if (level > SPEECH_THRESHOLD) {
-            console.log('[Auto Mode] Speech detected, level:', level);
-            // Normal case - start recording
-            startAutoRecording();
-          }
-        } else if (isAutoRecording) {
-          // Currently recording - look for silence to stop
-          if (level > SILENCE_THRESHOLD) {
-            // Still speaking - reset silence timer
-            hasSpeechStarted = true;
-            if (silenceTimer) {
-              clearTimeout(silenceTimer);
-              silenceTimer = null;
-            }
-          } else if (hasSpeechStarted && !silenceTimer) {
-            // Silence detected after speech - start silence timer
-            console.log('[Auto Mode] Silence detected, starting timer');
-            silenceTimer = setTimeout(() => {
-              if (isAutoRecording && autoMode) {
-                console.log('[Auto Mode] Silence timeout, stopping recording');
-                stopAutoRecording();
-              }
-            }, SILENCE_TIMEOUT);
-          }
-        }
-
-      }, 100); // Check every 100ms
-    }
-
-    function updateAutoModeVisual(level) {
-      // Show audio level in the status text when in auto-listening state
-      if (mainButton.classList.contains('auto-listening')) {
-        const normalizedLevel = Math.min(100, Math.round(level * 2));
-        if (level > SPEECH_THRESHOLD) {
-          statusText.textContent = 'Hearing you...';
-        } else if (level > SILENCE_THRESHOLD) {
-          statusText.textContent = 'Auto mode';
-        } else {
-          statusText.textContent = 'Auto mode';
-        }
-      }
-    }
-
-    async function startAutoRecording() {
-      if (isAutoRecording || isListening) return;
-
-      console.log('[Auto Mode] Starting recording');
-      isAutoRecording = true;
-      hasSpeechStarted = true;
-      audioChunks = [];
-
-      // Determine MIME type
-      let mimeType = 'audio/webm';
-      if (MediaRecorder.isTypeSupported('audio/mp4')) {
-        mimeType = 'audio/mp4';
-      } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        mimeType = 'audio/webm;codecs=opus';
-      }
-
-      // Create MediaRecorder using the existing auto mode stream
-      mediaRecorder = new MediaRecorder(autoModeStream, { mimeType });
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) audioChunks.push(event.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        console.log('[Auto Mode] Recording stopped, processing...');
-        isAutoRecording = false;
-        isListening = false;
-        hasSpeechStarted = false;
-
-        if (silenceTimer) {
-          clearTimeout(silenceTimer);
-          silenceTimer = null;
-        }
-
-        // Don't process if auto mode was disabled
-        if (!autoMode) {
-          console.log('[Auto Mode] Auto mode disabled, skipping processing');
-          return;
-        }
-
-        const audioBlob = new Blob(audioChunks, { type: mimeType });
-        console.log('[Auto Mode] Audio blob size:', audioBlob.size);
-
-        // Check if we have meaningful audio (more than a tiny snippet)
-        if (audioBlob.size < 1000) {
-          // Too small, probably just noise - restart listening
-          console.log('[Auto Mode] Audio too small, discarding');
-          setButtonState('auto-listening');
-          return;
-        }
-
-        setButtonState('processing');
-        statusText.textContent = 'Thinking';
-
-        try {
-          const wavBlob = await convertToWav(audioBlob);
-          const base64Audio = await blobToBase64(wavBlob);
-          console.log('[Auto Mode] Sending to API...');
-          savePendingVoiceMessage(base64Audio);
-          await sendAudioToAPI(base64Audio);
-          console.log('[Auto Mode] API response received');
-          clearPendingVoiceMessage();
-        } catch (e) {
-          console.error('[Auto Mode] Audio processing error:', e);
-          showError('Failed to process audio');
-        }
-
-        // After processing, if still in auto mode, go back to listening
-        // (This may not run if TTS started - the TTS end handler will reset state)
-        if (autoMode && !isSpeaking && speechQueue.length === 0) {
-          console.log('[Auto Mode] Returning to listening state');
-          setButtonState('auto-listening');
-        }
-      };
-
-      mediaRecorder.start();
-      isListening = true;
-      setButtonState('listening');
-    }
-
-    function stopAutoRecording() {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-      }
     }
 
     function blobToBase64(blob) {
@@ -2082,7 +1711,6 @@ Be concise and direct in your responses. Focus on being helpful and informative.
       if (isFirst) {
         speechTotalChars = 0;
         speechSpokenChars = 0;
-        bleedCheckDoneThisTurn = false; // Reset bleed check for new response
       }
       speechTotalChars += sanitized.length;
 
@@ -2096,19 +1724,7 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         if (speechQueue.length === 0) {
           showSpeechProgress(false);
           stopBtn.classList.add('hidden');
-
-          // If in auto mode, add cooldown before listening again
-          if (autoMode) {
-            autoModeCooldown = true;
-            setTimeout(() => {
-              autoModeCooldown = false;
-              if (autoMode) {
-                setButtonState('auto-listening');
-              }
-            }, AUTO_MODE_COOLDOWN);
-          } else {
-            setButtonState('ready');
-          }
+          setButtonState('ready');
         }
         return;
       }
@@ -2131,13 +1747,6 @@ Be concise and direct in your responses. Focus on being helpful and informative.
 
       // iOS Safari workaround: cancel any pending speech first
       speechSynthesis.cancel();
-
-      // Auto-mode: capture baseline audio level before TTS starts
-      // We'll check for audio bleed once speech begins
-      let preStartLevel = 0;
-      if (autoMode && autoModeAnalyser) {
-        preStartLevel = getAudioLevel();
-      }
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1;
@@ -2172,45 +1781,6 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         }
         speechSpokenChars += textLength;
         processQueue();
-      };
-
-      utterance.onstart = () => {
-        console.log('[TTS] Utterance started');
-        // Auto-mode: detect audio bleed from speakers into mic (only once per response)
-        if (autoMode && autoModeAnalyser && !bleedCheckDoneThisTurn) {
-          bleedCheckDoneThisTurn = true;
-          // Start with interruptions DISABLED - only enable if no bleed detected
-          interruptionsEnabledThisTurn = false;
-
-          // Sample audio levels over 500ms to detect bleed reliably
-          let maxLevel = 0;
-          let sampleCount = 0;
-          const bleedCheckInterval = setInterval(() => {
-            if (!isSpeaking) {
-              clearInterval(bleedCheckInterval);
-              return;
-            }
-            const level = getAudioLevel();
-            if (level > maxLevel) maxLevel = level;
-            sampleCount++;
-
-            // After 500ms (5 samples at 100ms), make the decision
-            if (sampleCount >= 5) {
-              clearInterval(bleedCheckInterval);
-              const levelIncrease = maxLevel - preStartLevel;
-              console.log('[Auto Mode] Audio bleed check - before:', preStartLevel.toFixed(2),
-                          'maxDuring:', maxLevel.toFixed(2), 'increase:', levelIncrease.toFixed(2));
-
-              // Only enable interruptions if NO significant audio bleed detected
-              if (levelIncrease <= 0.5) {
-                console.log('[Auto Mode] No audio bleed detected - interruptions enabled for this turn.');
-                interruptionsEnabledThisTurn = true;
-              } else {
-                console.log('[Auto Mode] Audio bleed detected! Interruptions disabled for this turn.');
-              }
-            }
-          }, 100);
-        }
       };
 
       utterance.onend = markEnded;
@@ -2248,20 +1818,7 @@ Be concise and direct in your responses. Focus on being helpful and informative.
       speechSynthesis.cancel();
       isSpeaking = false;
       showSpeechProgress(false);
-
-      // If in auto mode, add cooldown to prevent picking up residual audio
-      if (autoMode) {
-        autoModeCooldown = true;
-        setTimeout(() => {
-          autoModeCooldown = false;
-          if (autoMode) {
-            setButtonState('auto-listening');
-          }
-        }, AUTO_MODE_COOLDOWN);
-      } else {
-        setButtonState('ready');
-      }
-
+      setButtonState('ready');
       stopBtn.classList.add('hidden');
     }
 
@@ -2490,35 +2047,8 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         logout();
       });
 
-      // Main button click (with double-click detection for auto-mode)
-      let clickTimer = null;
-      let clickCount = 0;
-
+      // Main button click
       mainButton.addEventListener('click', () => {
-        clickCount++;
-
-        if (clickCount === 1) {
-          // Wait to see if this is a double-click
-          clickTimer = setTimeout(() => {
-            clickCount = 0;
-            // Single click - normal behavior
-            handleMainButtonClick();
-          }, 250);
-        } else if (clickCount === 2) {
-          // Double click - toggle auto mode
-          clearTimeout(clickTimer);
-          clickCount = 0;
-          toggleAutoMode();
-        }
-      });
-
-      function handleMainButtonClick() {
-        // In auto mode, single click stops auto mode
-        if (autoMode) {
-          toggleAutoMode();
-          return;
-        }
-
         if (isSpeaking || speechQueue.length > 0) {
           stopSpeaking();
         }
@@ -2527,7 +2057,7 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         } else {
           startRecording();
         }
-      }
+      });
 
       // Spacebar
       document.addEventListener('keydown', (e) => {
