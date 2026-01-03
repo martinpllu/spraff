@@ -83,6 +83,7 @@
     let mediaRecorder = null;
     let audioChunks = [];
     let audioStream = null;
+    let recordingCancelled = false;
     let selectedVoiceName = localStorage.getItem('selectedVoice') || null;
     let cloudVoicesEnabled = localStorage.getItem('cloudVoicesEnabled') === 'true';
     let speechQueue = [];
@@ -134,6 +135,7 @@
     const settingsDropdown = document.getElementById('settingsDropdown');
     const voiceSettingsBtn = document.getElementById('voiceSettingsBtn');
     const stopBtn = document.getElementById('stopBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
     const voiceModal = document.getElementById('voiceModal');
     const modalClose = document.getElementById('modalClose');
     const voiceList = document.getElementById('voiceList');
@@ -323,28 +325,35 @@
           mainButton.classList.add('listening');
           statusText.classList.add('listening');
           statusText.textContent = 'Listening';
-          hintText.classList.add('hidden');
+          hintText.textContent = 'Push to send';
+          hintText.classList.remove('hidden');
+          cancelBtn.classList.remove('hidden');
           break;
         case 'auto-listening':
           mainButton.classList.add('auto-listening');
           statusText.classList.add('auto-listening');
           statusText.textContent = 'Auto mode';
+          cancelBtn.classList.add('hidden');
           // Don't hide hint - it shows how to exit
           break;
         case 'processing':
           mainButton.classList.add('processing');
           statusText.textContent = 'Thinking';
           hintText.classList.add('hidden');
+          cancelBtn.classList.add('hidden');
           break;
         case 'speaking':
           mainButton.classList.add('speaking');
           statusText.classList.add('speaking');
           statusText.textContent = 'Speaking';
           hintText.classList.add('hidden');
+          cancelBtn.classList.add('hidden');
           break;
         default:
           statusText.textContent = 'Ready';
+          hintText.textContent = 'Double-tap for auto mode, or tap to speak';
           hintText.classList.remove('hidden');
+          cancelBtn.classList.add('hidden');
       }
     }
 
@@ -914,9 +923,17 @@
         };
 
         mediaRecorder.onstop = async () => {
-          const audioBlob = new Blob(audioChunks, { type: mimeType });
           audioStream.getTracks().forEach(track => track.stop());
           audioStream = null;
+
+          // If cancelled, don't process the audio
+          if (recordingCancelled) {
+            recordingCancelled = false;
+            setButtonState('ready');
+            return;
+          }
+
+          const audioBlob = new Blob(audioChunks, { type: mimeType });
 
           try {
             const wavBlob = await convertToWav(audioBlob);
@@ -950,6 +967,14 @@
       }
       isListening = false;
       setButtonState('processing');
+    }
+
+    function cancelRecording() {
+      recordingCancelled = true;
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      isListening = false;
     }
 
     // ============ Auto Mode (Voice Activity Detection) ============
@@ -2580,6 +2605,9 @@ Be concise and direct in your responses. Focus on being helpful and informative.
 
       // Stop button
       stopBtn.addEventListener('click', stopSpeaking);
+
+      // Cancel button
+      cancelBtn.addEventListener('click', cancelRecording);
 
       // Voice modal
       modalClose.addEventListener('click', closeVoiceSettings);
