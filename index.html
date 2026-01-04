@@ -227,13 +227,6 @@
               </svg>
               Copy chat
             </button>
-            <button id="clearChatBtn">
-              <svg viewBox="0 0 24 24">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-              <span class="clear-chat-text">Clear chat</span>
-            </button>
           </div>
           <!-- Settings submenu -->
           <div class="settings-submenu" id="settingsSubmenu">
@@ -290,6 +283,10 @@
             <line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
           <span>Cancel</span>
+        </button>
+        <button class="action-btn hidden" id="clearChatBtn">
+          <span class="clear-chat-badge" id="clearChatBadge"></span>
+          <span class="clear-chat-text">Clear</span>
         </button>
       </div>
       <div class="bottom-bar-right">

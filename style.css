@@ -215,6 +215,22 @@ body {
   z-index: 40;
 }
 
+/* Clear chat badge */
+.clear-chat-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 0.35rem;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--fg-muted);
+  background: var(--bg-warm);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
 
 /* The Button - Central Control */
 .button-container {
@@ -423,24 +439,27 @@ body {
   z-index: 50;
 }
 
-.bottom-bar-left,
-.bottom-bar-right {
+.bottom-bar-left {
   flex: 0 0 auto;
 }
 
 .bottom-bar-center {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
 }
 
+.bottom-bar-right {
+  flex: 0 0 auto;
+}
+
 .action-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.65rem 1rem;
+  height: 44px;
+  padding: 0 1rem;
   background: var(--surface);
   border: 2px solid var(--border);
   border-radius: 14px;
@@ -498,6 +517,23 @@ body {
   color: var(--secondary);
 }
 
+/* Clear chat button - confirmation state */
+#clearChatBtn.confirming {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+#clearChatBtn.confirming:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* Hide clear button when stop or cancel are visible */
+.bottom-bar-center:has(#stopBtn:not(.hidden)) #clearChatBtn,
+.bottom-bar-center:has(#cancelBtn:not(.hidden)) #clearChatBtn {
+  display: none;
+}
+
 /* Settings menu - inside bottom bar */
 .settings-menu {
   position: relative;
@@ -509,7 +545,8 @@ body {
 }
 
 .settings-menu-btn {
-  padding: 0.65rem 1rem;
+  height: 44px;
+  padding: 0 1rem;
   border-radius: 14px;
   border: 2px solid var(--border);
   background: var(--surface);
@@ -608,16 +645,6 @@ body {
   stroke: var(--fg-muted);
   stroke-width: 2;
   fill: none;
-}
-
-/* Clear chat confirmation state */
-.settings-dropdown button#clearChatBtn.confirming {
-  background: var(--error, #ef4444);
-  color: white;
-}
-
-.settings-dropdown button#clearChatBtn.confirming svg {
-  stroke: white;
 }
 
 /* Settings submenu */
@@ -1431,7 +1458,8 @@ body {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.35rem;
+  height: 44px;
+  padding: 0 0.35rem;
   background: var(--surface);
   border: 2px solid var(--border);
   border-radius: 14px;

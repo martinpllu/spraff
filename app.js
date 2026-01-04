@@ -26,6 +26,7 @@
       } catch (e) {
         console.warn('Failed to save conversation history:', e);
       }
+      updateVoiceSummary();
     }
 
     function clearConversationHistory() {
@@ -147,6 +148,7 @@
     const textModeBtn = document.getElementById('textModeBtn');
     const conversationHistoryEl = document.getElementById('conversationHistory');
     const clearChatBtn = document.getElementById('clearChatBtn');
+    const clearChatBadge = document.getElementById('clearChatBadge');
 
     // ============ Initialization ============
     function init() {
@@ -168,6 +170,7 @@
       setupEventListeners();
       lockOrientation();
       checkPendingVoiceMessage();
+      updateVoiceSummary();
     }
 
     // ============ Pending Voice Message Recovery ============
@@ -692,6 +695,24 @@
       textMode = enabled;
       localStorage.setItem('textMode', enabled);
       updateModeUI();
+    }
+
+    // ============ Voice Mode Summary ============
+    function updateVoiceSummary() {
+      if (conversationHistory.length === 0) {
+        clearChatBtn.classList.add('hidden');
+        return;
+      }
+
+      // Count user messages only
+      const messageCount = conversationHistory.filter(m => m.role === 'user').length;
+      if (messageCount === 0) {
+        clearChatBtn.classList.add('hidden');
+        return;
+      }
+
+      clearChatBadge.textContent = messageCount;
+      clearChatBtn.classList.remove('hidden');
     }
 
     function renderConversationHistory() {
@@ -2198,10 +2219,6 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         if (!settingsDropdown.contains(e.target) && !settingsSubmenu.contains(e.target) && e.target !== settingsMenuBtn) {
           settingsDropdown.classList.remove('open');
           settingsSubmenu.classList.remove('open');
-          // Reset clear chat confirmation state
-          clearChatBtn.classList.remove('confirming');
-          const clearText = clearChatBtn.querySelector('.clear-chat-text');
-          if (clearText) clearText.textContent = 'Clear chat';
         }
       });
 
@@ -2311,20 +2328,33 @@ Be concise and direct in your responses. Focus on being helpful and informative.
       let clearChatConfirming = false;
       const clearChatText = clearChatBtn.querySelector('.clear-chat-text');
 
+      function resetClearConfirmation() {
+        if (clearChatConfirming) {
+          clearChatConfirming = false;
+          clearChatBtn.classList.remove('confirming');
+          clearChatText.textContent = 'Clear';
+        }
+      }
+
       clearChatBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (clearChatConfirming) {
           // Second click - actually clear
-          settingsDropdown.classList.remove('open');
           startNewChat();
-          clearChatConfirming = false;
-          clearChatBtn.classList.remove('confirming');
-          clearChatText.textContent = 'Clear chat';
+          resetClearConfirmation();
+          clearChatBtn.classList.add('hidden');
         } else {
           // First click - show confirmation
           clearChatConfirming = true;
           clearChatBtn.classList.add('confirming');
-          clearChatText.textContent = 'Clear chat?';
+          clearChatText.textContent = 'Clear?';
+        }
+      });
+
+      // Click anywhere else to cancel clear confirmation
+      document.addEventListener('click', (e) => {
+        if (!clearChatBtn.contains(e.target)) {
+          resetClearConfirmation();
         }
       });
 
