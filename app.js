@@ -137,6 +137,9 @@
     const privacyModalClose = document.getElementById('privacyModalClose');
     const privacyBtn = document.getElementById('privacyBtn');
     const errorToast = document.getElementById('errorToast');
+    const installBtn = document.getElementById('installBtn');
+    const installModal = document.getElementById('installModal');
+    const installModalClose = document.getElementById('installModalClose');
     const textInputContainer = document.getElementById('textInputContainer');
     const textInput = document.getElementById('textInput');
     const textSendBtn = document.getElementById('textSendBtn');
@@ -199,6 +202,50 @@
       if (document.visibilityState === 'visible') {
         checkPendingVoiceMessage();
       }
+    });
+
+    // ============ PWA Install Prompt ============
+    let deferredInstallPrompt = null;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+    // Capture the install prompt (Chrome/Android)
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      // Show install button if not already in standalone mode
+      if (!isStandalone) {
+        installBtn.classList.remove('hidden');
+      }
+    });
+
+    // Show install button on iOS Safari (no beforeinstallprompt event)
+    if (isIOS && !isStandalone) {
+      installBtn.classList.remove('hidden');
+    }
+
+    function handleInstallClick() {
+      settingsDropdown.classList.remove('open');
+
+      if (deferredInstallPrompt) {
+        // Chrome/Android - trigger native prompt
+        deferredInstallPrompt.prompt();
+        deferredInstallPrompt.userChoice.then((result) => {
+          if (result.outcome === 'accepted') {
+            installBtn.classList.add('hidden');
+          }
+          deferredInstallPrompt = null;
+        });
+      } else if (isIOS) {
+        // iOS Safari - show instructions modal
+        installModal.classList.remove('hidden');
+      }
+    }
+
+    // Hide install button if app gets installed
+    window.addEventListener('appinstalled', () => {
+      installBtn.classList.add('hidden');
+      deferredInstallPrompt = null;
     });
 
     // ============ Orientation Lock ============
@@ -2190,6 +2237,15 @@ Be concise and direct in your responses. Focus on being helpful and informative.
       });
       privacyModal.addEventListener('click', (e) => {
         if (e.target === privacyModal) privacyModal.classList.add('hidden');
+      });
+
+      // Install app
+      installBtn.addEventListener('click', handleInstallClick);
+      installModalClose.addEventListener('click', () => {
+        installModal.classList.add('hidden');
+      });
+      installModal.addEventListener('click', (e) => {
+        if (e.target === installModal) installModal.classList.add('hidden');
       });
 
       // Stop button

@@ -96,6 +96,25 @@
     </div>
   </div>
 
+  <!-- iOS Install Modal -->
+  <div class="modal-overlay hidden" id="installModal">
+    <div class="modal modal-small">
+      <div class="modal-header">
+        <h3>Install App</h3>
+        <button class="modal-close" id="installModalClose">&times;</button>
+      </div>
+      <div class="modal-body" style="line-height: 1.7;">
+        <p style="margin-bottom: 1rem;">To install Spraff on your device:</p>
+        <ol style="margin-bottom: 1rem; padding-left: 1.5rem;">
+          <li style="margin-bottom: 0.5rem;">Tap the <strong>Share</strong> button in Safari</li>
+          <li style="margin-bottom: 0.5rem;">Scroll down and tap <strong>Add to Home Screen</strong></li>
+          <li style="margin-bottom: 0.5rem;">Tap <strong>Add</strong> to confirm</li>
+        </ol>
+        <p style="color: var(--fg-muted);">The app will then launch in full-screen mode without browser controls.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Voice Settings Modal -->
   <div class="modal-overlay hidden" id="voiceModal">
     <div class="modal">
@@ -240,6 +259,14 @@
                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
               </svg>
               Cost
+            </button>
+            <button id="installBtn" class="hidden">
+              <svg viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Install app
             </button>
             <div class="divider"></div>
             <button id="aboutBtn">
