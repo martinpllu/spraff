@@ -209,9 +209,8 @@
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-    // Only show install option on mobile devices
-    if (isMobile && !isStandalone) {
-      // Capture the install prompt (Chrome/Android)
+    if (!isStandalone) {
+      // Capture the install prompt (Chrome/Brave/Edge on desktop and Android)
       window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredInstallPrompt = e;
@@ -219,7 +218,7 @@
       });
 
       // Show install button on iOS Safari (no beforeinstallprompt event)
-      if (isIOS) {
+      if (isMobile && isIOS) {
         installBtn.classList.remove('hidden');
       }
 
@@ -234,7 +233,7 @@
       settingsDropdown.classList.remove('open');
 
       if (deferredInstallPrompt) {
-        // Chrome/Android - trigger native prompt
+        // Trigger native install prompt
         deferredInstallPrompt.prompt();
         deferredInstallPrompt.userChoice.then((result) => {
           if (result.outcome === 'accepted') {
@@ -242,7 +241,7 @@
           }
           deferredInstallPrompt = null;
         });
-      } else if (isIOS) {
+      } else if (isMobile && isIOS) {
         // iOS Safari - show instructions modal
         installModal.classList.remove('hidden');
       }
