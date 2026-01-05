@@ -209,19 +209,25 @@
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-    // Capture the install prompt (Chrome/Android)
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredInstallPrompt = e;
-      // Show install button if not already in standalone mode
-      if (!isStandalone) {
+    // Only show install option on mobile devices
+    if (isMobile && !isStandalone) {
+      // Capture the install prompt (Chrome/Android)
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        installBtn.classList.remove('hidden');
+      });
+
+      // Show install button on iOS Safari (no beforeinstallprompt event)
+      if (isIOS) {
         installBtn.classList.remove('hidden');
       }
-    });
 
-    // Show install button on iOS Safari (no beforeinstallprompt event)
-    if (isIOS && !isStandalone) {
-      installBtn.classList.remove('hidden');
+      // Hide install button if app gets installed
+      window.addEventListener('appinstalled', () => {
+        installBtn.classList.add('hidden');
+        deferredInstallPrompt = null;
+      });
     }
 
     function handleInstallClick() {
@@ -241,12 +247,6 @@
         installModal.classList.remove('hidden');
       }
     }
-
-    // Hide install button if app gets installed
-    window.addEventListener('appinstalled', () => {
-      installBtn.classList.add('hidden');
-      deferredInstallPrompt = null;
-    });
 
     // ============ Orientation Lock ============
     function lockOrientation() {
