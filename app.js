@@ -2050,11 +2050,6 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         }
         buttonPressStart = Date.now();
         isPushToTalk = false;
-
-        // If not already listening, start recording
-        if (!isListening) {
-          startRecording();
-        }
       }
 
       function handlePressEnd() {
@@ -2067,8 +2062,13 @@ Be concise and direct in your responses. Focus on being helpful and informative.
             stopRecording();
           }
         } else {
-          // Short press: toggle mode - already started, will stop on next press
+          // Short press: toggle mode
           isPushToTalk = false;
+          if (isListening) {
+            stopRecording();
+          } else {
+            startRecording();
+          }
         }
       }
 
