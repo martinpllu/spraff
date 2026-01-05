@@ -2146,8 +2146,9 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         buttonRecordingStarted = false;
       });
 
-      // Spacebar - same logic
+      // Spacebar - same logic as mouse
       let spacebarPressStart = 0;
+      let spacebarWasListening = false;
 
       document.addEventListener('keydown', (e) => {
         if (!voiceModal.classList.contains('hidden')) return;
@@ -2161,9 +2162,7 @@ Be concise and direct in your responses. Focus on being helpful and informative.
             stopSpeaking();
           }
           spacebarPressStart = Date.now();
-          if (!isListening) {
-            startRecording();
-          }
+          spacebarWasListening = isListening;
         }
       });
 
@@ -2172,11 +2171,19 @@ Be concise and direct in your responses. Focus on being helpful and informative.
           const pressDuration = Date.now() - spacebarPressStart;
           spacebarPressStart = 0;
 
-          if (pressDuration >= LONG_PRESS_THRESHOLD && isListening) {
-            // Long press: stop on release
-            stopRecording();
+          if (pressDuration >= LONG_PRESS_THRESHOLD) {
+            // Long press: push-to-talk - stop on release if we started it
+            if (isListening && !spacebarWasListening) {
+              stopRecording();
+            }
+          } else {
+            // Short press: toggle mode
+            if (isListening) {
+              stopRecording();
+            } else {
+              startRecording();
+            }
           }
-          // Short press: toggle mode - already started, will stop on next press
         }
       });
 
