@@ -2049,26 +2049,31 @@ Be concise and direct in your responses. Focus on being helpful and informative.
           stopSpeaking();
         }
         buttonPressStart = Date.now();
-        isPushToTalk = false;
+        buttonWasListening = isListening;
+
+        // Always start recording on press (for both modes)
+        if (!isListening) {
+          startRecording();
+        }
       }
+
+      let buttonWasListening = false;
 
       function handlePressEnd() {
         const pressDuration = Date.now() - buttonPressStart;
+        buttonPressStart = 0;
 
         if (pressDuration >= LONG_PRESS_THRESHOLD) {
           // Long press: push-to-talk mode - stop on release
-          isPushToTalk = true;
           if (isListening) {
             stopRecording();
           }
         } else {
-          // Short press: toggle mode
-          isPushToTalk = false;
-          if (isListening) {
+          // Short press: toggle mode - stop if we were already listening before this press
+          if (buttonWasListening && isListening) {
             stopRecording();
-          } else {
-            startRecording();
           }
+          // If we weren't listening, we already started on press, so do nothing
         }
       }
 
@@ -2163,6 +2168,11 @@ Be concise and direct in your responses. Focus on being helpful and informative.
           }
           spacebarPressStart = Date.now();
           spacebarWasListening = isListening;
+
+          // Always start recording on press (for both modes)
+          if (!isListening) {
+            startRecording();
+          }
         }
       });
 
@@ -2172,17 +2182,16 @@ Be concise and direct in your responses. Focus on being helpful and informative.
           spacebarPressStart = 0;
 
           if (pressDuration >= LONG_PRESS_THRESHOLD) {
-            // Long press: push-to-talk - stop on release if we started it
-            if (isListening && !spacebarWasListening) {
+            // Long press: push-to-talk - stop on release
+            if (isListening) {
               stopRecording();
             }
           } else {
-            // Short press: toggle mode
-            if (isListening) {
+            // Short press: toggle mode - stop if we were already listening before this press
+            if (spacebarWasListening && isListening) {
               stopRecording();
-            } else {
-              startRecording();
             }
+            // If we weren't listening, we already started on keydown, so do nothing
           }
         }
       });
