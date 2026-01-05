@@ -173,6 +173,8 @@
     // ============ Pending Voice Message Recovery ============
     async function checkPendingVoiceMessage() {
       if (!apiKey) return;
+      // Don't retry if we're already doing something
+      if (isListening || isSpeaking || isProcessingText) return;
 
       const pendingAudio = getPendingVoiceMessage();
       if (pendingAudio) {
@@ -191,6 +193,13 @@
         }
       }
     }
+
+    // Retry pending audio when app returns to foreground (PWA support)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkPendingVoiceMessage();
+      }
+    });
 
     // ============ Orientation Lock ============
     function lockOrientation() {
