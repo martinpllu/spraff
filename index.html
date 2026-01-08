@@ -174,6 +174,74 @@
 
   <!-- Main Voice Screen -->
   <div class="voice-screen hidden" id="voiceScreen">
+    <!-- Top Menu -->
+    <div class="top-menu" id="topMenu">
+      <div class="settings-menu" id="settingsMenu">
+        <button class="settings-menu-btn" id="settingsMenuBtn" title="Settings">
+          spraff
+          <svg viewBox="0 0 24 24" width="16" height="16">
+            <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+            <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+            <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+          </svg>
+        </button>
+        <div class="settings-dropdown" id="settingsDropdown">
+          <button id="voiceSettingsBtn">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            </svg>
+            Voice
+          </button>
+          <button id="costSettingsBtn">
+            <svg viewBox="0 0 24 24">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+            Cost
+          </button>
+          <button id="copyChatBtn">
+            <svg viewBox="0 0 24 24">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            Copy chat
+          </button>
+          <button id="installBtn" class="hidden">
+            <svg viewBox="0 0 24 24">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Install app
+          </button>
+          <div class="divider"></div>
+          <button id="aboutBtn">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            About
+          </button>
+          <button id="privacyBtn">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            Privacy
+          </button>
+          <button id="logoutBtn">
+            <svg viewBox="0 0 24 24">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Conversation History -->
     <div class="conversation-history" id="conversationHistory"></div>
 
@@ -213,88 +281,24 @@
       Push button or <kbd>Space</kbd> to speak
     </div>
 
-    <!-- Bottom Bar - menu, actions, toggle -->
+    <!-- Bottom Bar - controls only -->
     <div class="bottom-bar" id="bottomBar">
-      <div class="bottom-bar-left">
-        <div class="settings-menu" id="settingsMenu">
-          <button class="settings-menu-btn" id="settingsMenuBtn" title="Settings">
-            spraff
-            <svg viewBox="0 0 24 24" width="16" height="16">
-              <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
-              <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-              <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
-            </svg>
-          </button>
-          <div class="settings-dropdown" id="settingsDropdown">
-            <button id="settingsSubmenuBtn" class="has-submenu">
-              <svg viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-              </svg>
-              Settings
-              <svg class="chevron" viewBox="0 0 24 24" width="16" height="16">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
-            </button>
-            <button id="copyChatBtn">
-              <svg viewBox="0 0 24 24">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-              </svg>
-              Copy chat
-            </button>
-          </div>
-          <!-- Settings submenu -->
-          <div class="settings-submenu" id="settingsSubmenu">
-            <button id="voiceSettingsBtn">
-              <svg viewBox="0 0 24 24">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-              </svg>
-              Voice
-            </button>
-            <button id="costSettingsBtn">
-              <svg viewBox="0 0 24 24">
-                <line x1="12" y1="1" x2="12" y2="23"/>
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-              </svg>
-              Cost
-            </button>
-            <button id="installBtn" class="hidden">
-              <svg viewBox="0 0 24 24">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              Install app
-            </button>
-            <div class="divider"></div>
-            <button id="aboutBtn">
-              <svg viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="16" x2="12" y2="12"/>
-                <line x1="12" y1="8" x2="12.01" y2="8"/>
-              </svg>
-              About
-            </button>
-            <button id="privacyBtn">
-              <svg viewBox="0 0 24 24">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
-              Privacy
-            </button>
-            <button id="logoutBtn">
-              <svg viewBox="0 0 24 24">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
-              Logout
-            </button>
-          </div>
-        </div>
+      <div class="mode-toggle" id="modeToggle">
+        <button class="mode-btn active" id="voiceModeBtn" title="Voice mode">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          </svg>
+        </button>
+        <button class="mode-btn" id="textModeBtn" title="Text mode">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 7V4h16v3"/>
+            <path d="M9 20h6"/>
+            <path d="M12 4v16"/>
+          </svg>
+        </button>
       </div>
-      <div class="bottom-bar-center">
+      <div class="bottom-bar-right">
         <button class="action-btn hidden" id="stopBtn">
           <svg viewBox="0 0 24 24">
             <rect x="6" y="6" width="12" height="12" rx="1"/>
@@ -309,26 +313,9 @@
           <span>Cancel</span>
         </button>
         <button class="action-btn hidden" id="clearChatBtn">
-          <span class="clear-chat-badge" id="clearChatBadge"></span>
           <span class="clear-chat-text">Clear</span>
+          <span class="clear-chat-badge" id="clearChatBadge"></span>
         </button>
-      </div>
-      <div class="bottom-bar-right">
-        <div class="mode-toggle" id="modeToggle">
-          <button class="mode-btn active" id="voiceModeBtn" title="Voice mode">
-            <svg viewBox="0 0 24 24">
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-            </svg>
-          </button>
-          <button class="mode-btn" id="textModeBtn" title="Text mode">
-            <svg viewBox="0 0 24 24">
-              <path d="M4 7V4h16v3"/>
-              <path d="M9 20h6"/>
-              <path d="M12 4v16"/>
-            </svg>
-          </button>
-        </div>
       </div>
     </div>
   </div>

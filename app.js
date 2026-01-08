@@ -2096,6 +2096,7 @@ Be concise and direct in your responses. Focus on being helpful and informative.
       let buttonTouchMoved = false;
       let buttonTouchStartTime = 0;
       let buttonRecordingStarted = false;
+      let buttonLongPressTimer = null;
 
       mainButton.addEventListener('touchstart', (e) => {
         e.preventDefault(); // Prevent mouse events from also firing
@@ -2104,7 +2105,14 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         buttonTouchStartTime = Date.now();
         buttonTouchMoved = false;
         buttonRecordingStarted = false;
-        // Don't start recording yet - wait to see if it's a swipe
+
+        // Set timer to start recording after threshold (for push-to-talk when finger doesn't move)
+        buttonLongPressTimer = setTimeout(() => {
+          if (!buttonTouchMoved && !buttonRecordingStarted) {
+            buttonRecordingStarted = true;
+            handlePressStart();
+          }
+        }, LONG_PRESS_THRESHOLD);
       });
 
       mainButton.addEventListener('touchmove', (e) => {
@@ -2113,17 +2121,21 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         // If moved more than 20px, it's a swipe not a tap
         if (deltaX > 20 || deltaY > 20) {
           buttonTouchMoved = true;
-        }
-
-        // Start recording after holding for a bit without moving (push-to-talk)
-        if (!buttonTouchMoved && !buttonRecordingStarted && Date.now() - buttonTouchStartTime >= LONG_PRESS_THRESHOLD) {
-          buttonRecordingStarted = true;
-          handlePressStart();
+          // Cancel the long press timer if it's a swipe
+          if (buttonLongPressTimer) {
+            clearTimeout(buttonLongPressTimer);
+            buttonLongPressTimer = null;
+          }
         }
       });
 
       mainButton.addEventListener('touchend', (e) => {
         e.preventDefault();
+        // Clear the long press timer
+        if (buttonLongPressTimer) {
+          clearTimeout(buttonLongPressTimer);
+          buttonLongPressTimer = null;
+        }
         if (buttonTouchMoved) {
           // It was a swipe - don't do anything
           buttonTouchMoved = false;
@@ -2202,13 +2214,10 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         settingsDropdown.classList.toggle('open');
       });
 
-      const settingsSubmenu = document.getElementById('settingsSubmenu');
-
       // Close dropdown when clicking outside
       document.addEventListener('click', (e) => {
-        if (!settingsDropdown.contains(e.target) && !settingsSubmenu.contains(e.target) && e.target !== settingsMenuBtn) {
+        if (!settingsDropdown.contains(e.target) && e.target !== settingsMenuBtn) {
           settingsDropdown.classList.remove('open');
-          settingsSubmenu.classList.remove('open');
         }
       });
 
@@ -2306,22 +2315,6 @@ Be concise and direct in your responses. Focus on being helpful and informative.
 
       // Mode switching - click anywhere in the toggle container to switch
       modeToggle.addEventListener('click', () => setTextMode(!textMode));
-
-      // Settings submenu
-      const settingsSubmenuBtn = document.getElementById('settingsSubmenuBtn');
-
-      settingsSubmenuBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        settingsSubmenu.classList.toggle('open');
-      });
-
-      // Close submenu when clicking submenu items
-      settingsSubmenu.querySelectorAll('button').forEach(btn => {
-        btn.addEventListener('click', () => {
-          settingsSubmenu.classList.remove('open');
-          settingsDropdown.classList.remove('open');
-        });
-      });
 
       // Clear chat with inline confirmation
       let clearChatConfirming = false;
