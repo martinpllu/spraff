@@ -16,6 +16,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <!-- VAD Library for continuous chat mode -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort.js"></script>
+  <script>
+    // Configure ONNX Runtime WASM paths before VAD loads
+    // This prevents "Failed to resolve module specifier" errors from CDN loading
+    ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/';
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.19/dist/bundle.min.js"></script>
 </head>
 <body>
   <!-- Landscape Warning -->
@@ -311,6 +319,13 @@
             <line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
           <span>Cancel</span>
+        </button>
+        <button class="action-btn hidden" id="exitContinuousBtn">
+          <svg viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+          <span>Exit</span>
         </button>
         <button class="action-btn hidden" id="clearChatBtn">
           <span class="clear-chat-text">Clear</span>

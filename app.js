@@ -97,6 +97,14 @@
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     let currentStreamingElement = null;
 
+    // Continuous mode state
+    let continuousModeActive = false;
+    let vadInstance = null;
+    let lastClickTime = 0;
+    let vadSuppressed = false;
+    const DOUBLE_CLICK_THRESHOLD = 300;
+    const SPEECH_END_BUFFER_MS = 600;
+
     // Stats
     const stats = {
       sessionCost: 0,
@@ -149,6 +157,7 @@
     const conversationHistoryEl = document.getElementById('conversationHistory');
     const clearChatBtn = document.getElementById('clearChatBtn');
     const clearChatBadge = document.getElementById('clearChatBadge');
+    const exitContinuousBtn = document.getElementById('exitContinuousBtn');
 
     // ============ Initialization ============
     function init() {
@@ -351,8 +360,8 @@
     }
 
     function setButtonState(state) {
-      mainButton.classList.remove('listening', 'processing', 'speaking');
-      statusText.classList.remove('listening', 'speaking');
+      mainButton.classList.remove('listening', 'processing', 'speaking', 'continuous-listening');
+      statusText.classList.remove('listening', 'speaking', 'continuous');
 
       switch (state) {
         case 'listening':
@@ -373,6 +382,20 @@
           mainButton.classList.add('speaking');
           statusText.classList.add('speaking');
           statusText.textContent = 'Speaking';
+          hintText.classList.add('hidden');
+          cancelBtn.classList.add('hidden');
+          break;
+        case 'continuous-ready':
+          statusText.classList.add('continuous');
+          statusText.textContent = 'Continuous Mode';
+          hintText.textContent = 'Speak anytime. Double-click to exit';
+          hintText.classList.remove('hidden');
+          cancelBtn.classList.add('hidden');
+          break;
+        case 'continuous-listening':
+          mainButton.classList.add('continuous-listening');
+          statusText.classList.add('continuous', 'listening');
+          statusText.textContent = 'Listening...';
           hintText.classList.add('hidden');
           cancelBtn.classList.add('hidden');
           break;
@@ -1067,6 +1090,197 @@
       }
     }
 
+    // ============ Continuous Mode / VAD ============
+    async function initializeVAD() {
+      if (vadInstance) return vadInstance;
+
+      // Check if VAD library is loaded
+      if (typeof vad === 'undefined') {
+        console.error('VAD library not loaded');
+        showError('Voice detection unavailable');
+        return null;
+      }
+
+      try {
+        vadInstance = await vad.MicVAD.new({
+          positiveSpeechThreshold: 0.8,
+          negativeSpeechThreshold: 0.3,
+          redemptionFrames: 8,
+          minSpeechFrames: 4,
+          preSpeechPadFrames: 3,
+          submitUserSpeechOnPause: false,
+
+          onSpeechStart: () => {
+            console.log('VAD: Speech start detected');
+            if (vadSuppressed || isSpeaking || !continuousModeActive) return;
+            startContinuousModeRecording();
+          },
+
+          onSpeechEnd: (audio) => {
+            console.log('VAD: Speech end detected');
+            if (vadSuppressed || isSpeaking || !continuousModeActive) return;
+            if (!isListening) return;
+            stopContinuousModeRecording(audio);
+          },
+
+          onVADMisfire: () => {
+            console.log('VAD: Misfire - speech too short');
+            if (isListening && continuousModeActive) {
+              cancelRecording();
+              setButtonState('continuous-ready');
+            }
+          }
+        });
+
+        return vadInstance;
+      } catch (error) {
+        console.error('Failed to initialize VAD:', error);
+        showError('Voice detection failed to initialize');
+        return null;
+      }
+    }
+
+    function startContinuousModeRecording() {
+      if (isListening) return;
+      audioChunks = [];
+      isListening = true;
+      setButtonState('continuous-listening');
+    }
+
+    async function stopContinuousModeRecording(vadAudio) {
+      if (!isListening) return;
+      isListening = false;
+      setButtonState('processing');
+
+      // Suppress VAD before processing (will resume after TTS)
+      suppressVAD();
+
+      try {
+        // Convert VAD Float32Array (16kHz) to WAV
+        const wavBlob = float32ToWav(vadAudio, 16000);
+        const base64Audio = await blobToBase64(wavBlob);
+
+        savePendingVoiceMessage(base64Audio);
+        await sendAudioToAPI(base64Audio);
+        clearPendingVoiceMessage();
+      } catch (error) {
+        console.error('Continuous mode processing error:', error);
+        showError('Failed to process speech');
+        // Quick resume on error
+        resumeVADAfterDelay(100);
+      }
+    }
+
+    function float32ToWav(samples, sampleRate) {
+      const numChannels = 1;
+      const bitDepth = 16;
+      const dataLength = samples.length * (bitDepth / 8);
+      const wavBuffer = new ArrayBuffer(44 + dataLength);
+      const view = new DataView(wavBuffer);
+
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, 36 + dataLength, true);
+      writeString(view, 8, 'WAVE');
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * numChannels * (bitDepth / 8), true);
+      view.setUint16(32, numChannels * (bitDepth / 8), true);
+      view.setUint16(34, bitDepth, true);
+      writeString(view, 36, 'data');
+      view.setUint32(40, dataLength, true);
+
+      for (let i = 0; i < samples.length; i++) {
+        const sample = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(44 + i * 2, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+      }
+
+      return new Blob([wavBuffer], { type: 'audio/wav' });
+    }
+
+    function suppressVAD() {
+      if (!vadInstance || vadSuppressed) return;
+      vadSuppressed = true;
+      vadInstance.pause();
+      console.log('VAD: Suppressed');
+    }
+
+    function resumeVAD() {
+      if (!vadInstance || !vadSuppressed || !continuousModeActive) return;
+      vadSuppressed = false;
+      vadInstance.start();
+      setButtonState('continuous-ready');
+      console.log('VAD: Resumed');
+    }
+
+    function resumeVADAfterDelay(delayMs = SPEECH_END_BUFFER_MS) {
+      setTimeout(() => {
+        if (continuousModeActive && !isSpeaking) {
+          resumeVAD();
+        }
+      }, delayMs);
+    }
+
+    async function enterContinuousMode() {
+      // Cancel any current recording
+      if (isListening) {
+        cancelRecording();
+      }
+
+      // Stop any current speech
+      if (isSpeaking) {
+        stopSpeaking();
+      }
+
+      // Initialize VAD if needed
+      const vadReady = await initializeVAD();
+      if (!vadReady) {
+        showError('Could not start continuous mode');
+        return;
+      }
+
+      continuousModeActive = true;
+      vadSuppressed = false;
+      setButtonState('continuous-ready');
+      vadInstance.start();
+
+      // Update UI
+      mainButton.classList.add('continuous-mode');
+      exitContinuousBtn.classList.remove('hidden');
+    }
+
+    function exitContinuousMode() {
+      if (!continuousModeActive) return;
+
+      continuousModeActive = false;
+
+      // Stop VAD
+      if (vadInstance) {
+        vadInstance.pause();
+        vadSuppressed = true;
+      }
+
+      // Cancel any ongoing recording
+      if (isListening) {
+        cancelRecording();
+      }
+
+      // Update UI
+      mainButton.classList.remove('continuous-mode');
+      exitContinuousBtn.classList.add('hidden');
+      setButtonState('ready');
+    }
+
+    function toggleContinuousMode() {
+      if (continuousModeActive) {
+        exitContinuousMode();
+      } else {
+        enterContinuousMode();
+      }
+    }
+
     // ============ Tool Calling ============
     function parseToolCall(response) {
       // Look for ```tool_call\n{...}\n``` pattern
@@ -1739,12 +1953,22 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         isSpeaking = false;
         if (speechQueue.length === 0) {
           stopBtn.classList.add('hidden');
-          setButtonState('ready');
+          // Resume VAD after TTS completes (with buffer delay)
+          if (continuousModeActive) {
+            resumeVADAfterDelay();
+          } else {
+            setButtonState('ready');
+          }
         }
         return;
       }
 
       isSpeaking = true;
+
+      // Suppress VAD while speaking
+      if (continuousModeActive) {
+        suppressVAD();
+      }
       const text = speechQueue.shift();
       const textLength = text.length;
 
@@ -1810,8 +2034,14 @@ Be concise and direct in your responses. Focus on being helpful and informative.
       speechQueue = [];
       speechSynthesis.cancel();
       isSpeaking = false;
-      setButtonState('ready');
       stopBtn.classList.add('hidden');
+
+      // Resume VAD if in continuous mode (short delay when user stops)
+      if (continuousModeActive) {
+        resumeVADAfterDelay(100);
+      } else {
+        setButtonState('ready');
+      }
     }
 
     // ============ Voice Settings ============
@@ -2041,10 +2271,16 @@ Be concise and direct in your responses. Focus on being helpful and informative.
 
       // Main button - support both tap-to-toggle and push-to-talk
       let buttonPressStart = 0;
-      let isPushToTalk = false;
       const LONG_PRESS_THRESHOLD = 300; // ms
+      let pendingClickTimer = null;
 
       function handlePressStart() {
+        // In continuous mode, button clicks don't start recording (VAD does)
+        if (continuousModeActive) {
+          buttonPressStart = Date.now();
+          return;
+        }
+
         if (isSpeaking || speechQueue.length > 0) {
           stopSpeaking();
         }
@@ -2063,6 +2299,46 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         const pressDuration = Date.now() - buttonPressStart;
         buttonPressStart = 0;
 
+        // Check for double-click (short press only)
+        if (pressDuration < LONG_PRESS_THRESHOLD) {
+          const now = Date.now();
+          if (now - lastClickTime < DOUBLE_CLICK_THRESHOLD) {
+            // Double-click detected - cancel pending single-click action
+            lastClickTime = 0;
+            if (pendingClickTimer) {
+              clearTimeout(pendingClickTimer);
+              pendingClickTimer = null;
+            }
+            // Cancel any recording that started on first click
+            if (isListening) {
+              cancelRecording();
+            }
+            toggleContinuousMode();
+            return;
+          }
+          lastClickTime = now;
+
+          // If we're not in continuous mode, we already started recording
+          // Set a timer to clear lastClickTime if no second click comes
+          if (!continuousModeActive) {
+            pendingClickTimer = setTimeout(() => {
+              pendingClickTimer = null;
+            }, DOUBLE_CLICK_THRESHOLD);
+          }
+        }
+
+        // Long press exits continuous mode and does push-to-talk
+        if (pressDuration >= LONG_PRESS_THRESHOLD && continuousModeActive) {
+          exitContinuousMode();
+          // Don't start normal recording - let user press again
+          return;
+        }
+
+        // In continuous mode, short single clicks do nothing (VAD handles recording)
+        if (continuousModeActive) {
+          return;
+        }
+
         if (pressDuration >= LONG_PRESS_THRESHOLD) {
           // Long press: push-to-talk mode - stop on release
           if (isListening) {
@@ -2080,6 +2356,17 @@ Be concise and direct in your responses. Focus on being helpful and informative.
       // Mouse events for desktop
       mainButton.addEventListener('mousedown', handlePressStart);
       mainButton.addEventListener('mouseup', handlePressEnd);
+
+      // Native dblclick event for reliable double-click detection
+      mainButton.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        // Cancel any recording that started on first click
+        if (isListening) {
+          cancelRecording();
+        }
+        toggleContinuousMode();
+      });
+
       mainButton.addEventListener('mouseleave', () => {
         // If user drags away while holding, treat as push-to-talk release
         if (buttonPressStart > 0 && isListening) {
@@ -2166,6 +2453,7 @@ Be concise and direct in your responses. Focus on being helpful and informative.
       // Spacebar - same logic as mouse
       let spacebarPressStart = 0;
       let spacebarWasListening = false;
+      let lastSpaceTime = 0;
 
       document.addEventListener('keydown', (e) => {
         if (!voiceModal.classList.contains('hidden')) return;
@@ -2173,8 +2461,22 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         if (!apiKey) return;
         if (e.repeat) return; // Ignore key repeat
 
+        // Escape key exits continuous mode
+        if (e.code === 'Escape' && continuousModeActive) {
+          e.preventDefault();
+          exitContinuousMode();
+          return;
+        }
+
         if (e.code === 'Space') {
           e.preventDefault();
+
+          // In continuous mode, spacebar doesn't start recording (VAD does)
+          if (continuousModeActive) {
+            spacebarPressStart = Date.now();
+            return;
+          }
+
           if (isSpeaking || speechQueue.length > 0) {
             stopSpeaking();
           }
@@ -2192,6 +2494,32 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         if (e.code === 'Space' && spacebarPressStart > 0) {
           const pressDuration = Date.now() - spacebarPressStart;
           spacebarPressStart = 0;
+
+          // Check for double-tap (short press only)
+          if (pressDuration < LONG_PRESS_THRESHOLD) {
+            const now = Date.now();
+            if (now - lastSpaceTime < DOUBLE_CLICK_THRESHOLD) {
+              // Double-tap detected
+              lastSpaceTime = 0;
+              if (continuousModeActive && isListening) {
+                cancelRecording();
+              }
+              toggleContinuousMode();
+              return;
+            }
+            lastSpaceTime = now;
+          }
+
+          // Long press exits continuous mode
+          if (pressDuration >= LONG_PRESS_THRESHOLD && continuousModeActive) {
+            exitContinuousMode();
+            return;
+          }
+
+          // In continuous mode, short single taps do nothing
+          if (continuousModeActive) {
+            return;
+          }
 
           if (pressDuration >= LONG_PRESS_THRESHOLD) {
             // Long press: push-to-talk - stop on release
@@ -2277,6 +2605,9 @@ Be concise and direct in your responses. Focus on being helpful and informative.
 
       // Cancel button
       cancelBtn.addEventListener('click', cancelRecording);
+
+      // Exit continuous mode button
+      exitContinuousBtn.addEventListener('click', exitContinuousMode);
 
       // Voice modal
       modalClose.addEventListener('click', closeVoiceSettings);
