@@ -103,6 +103,12 @@
     let vadSuppressed = false;
     const SPEECH_END_BUFFER_MS = 600;
 
+    // Mic bleed detection and interruption
+    let micBleedDetected = null; // null = not yet tested, true = bleed, false = no bleed
+    let isDetectingBleed = false;
+    let interruptionEnabled = false;
+    const BLEED_DETECTION_WINDOW_MS = 1500; // Listen for bleed during first 1.5s of first response
+
     // Stats
     const stats = {
       sessionCost: 0,
@@ -116,7 +122,6 @@
     const loginBtn = document.getElementById('loginBtn');
     const logoutBtn = document.getElementById('logoutBtn');
     const mainButton = document.getElementById('mainButton');
-    const continuousToggle = document.getElementById('continuousToggle');
     const statusText = document.getElementById('statusText');
     const hintText = document.getElementById('hintText');
     const settingsMenu = document.getElementById('settingsMenu');
@@ -1111,6 +1116,25 @@
 
           onSpeechStart: () => {
             console.log('VAD: Speech start detected');
+
+            // Check for mic bleed during detection window
+            if (isDetectingBleed) {
+              console.log('VAD: Mic bleed detected during TTS');
+              micBleedDetected = true;
+              interruptionEnabled = false;
+              isDetectingBleed = false;
+              updateBleedStatus();
+              return;
+            }
+
+            // Handle interruption if enabled and speaking
+            if (interruptionEnabled && isSpeaking && !isListening) {
+              console.log('VAD: User interruption detected');
+              stopSpeaking();
+              startRecording();
+              return;
+            }
+
             if (vadSuppressed || isSpeaking || !continuousModeActive) return;
             startContinuousModeRecording();
           },
@@ -1137,6 +1161,72 @@
         showError('Voice detection failed to initialize');
         return null;
       }
+    }
+
+    // Start bleed detection during first TTS response
+    async function startBleedDetection() {
+      if (micBleedDetected !== null) return; // Already tested
+
+      // Initialize VAD if needed (for bleed detection even outside continuous mode)
+      if (!vadInstance) {
+        const vadReady = await initializeVAD();
+        if (!vadReady) {
+          console.log('Could not initialize VAD for bleed detection');
+          return;
+        }
+      }
+
+      console.log('Starting mic bleed detection...');
+      isDetectingBleed = true;
+      updateBleedStatus(true); // Show "detecting..." status
+      vadInstance.start();
+
+      // After detection window, if no bleed detected, enable interruption
+      setTimeout(() => {
+        if (isDetectingBleed) {
+          // No bleed detected during window
+          isDetectingBleed = false;
+          micBleedDetected = false;
+          interruptionEnabled = true;
+          console.log('No mic bleed detected - interruption enabled');
+          updateBleedStatus();
+        }
+        // Keep VAD running for interruption if enabled, otherwise pause
+        if (!interruptionEnabled && !continuousModeActive) {
+          vadInstance.pause();
+        }
+      }, BLEED_DETECTION_WINDOW_MS);
+    }
+
+    // Update UI to show bleed detection status
+    function updateBleedStatus(detecting = false) {
+      const existingStatus = document.getElementById('bleedStatus');
+      if (existingStatus) {
+        existingStatus.remove();
+      }
+
+      const statusDiv = document.createElement('div');
+      statusDiv.id = 'bleedStatus';
+      statusDiv.style.cssText = `
+        position: fixed;
+        bottom: 70px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.75rem;
+        color: var(--fg-muted);
+        opacity: 0.7;
+      `;
+
+      if (detecting) {
+        statusDiv.textContent = 'Detecting audio environment...';
+      } else if (micBleedDetected === null) {
+        return; // Don't show anything
+      } else {
+        statusDiv.textContent = micBleedDetected
+          ? 'Audio bleed: yes (tap to interrupt)'
+          : 'Audio bleed: no (voice interrupts)';
+      }
+      document.body.appendChild(statusDiv);
     }
 
     function startContinuousModeRecording() {
@@ -1248,7 +1338,6 @@
       // Update UI
       mainButton.classList.add('continuous-mode');
       exitContinuousBtn.classList.remove('hidden');
-      continuousToggle.checked = true;
     }
 
     function exitContinuousMode() {
@@ -1270,7 +1359,6 @@
       // Update UI
       mainButton.classList.remove('continuous-mode');
       exitContinuousBtn.classList.add('hidden');
-      continuousToggle.checked = false;
       setButtonState('ready');
     }
 
@@ -2020,6 +2108,12 @@ Be concise and direct in your responses. Focus on being helpful and informative.
       // iOS Safari: need to resume in case it's paused
       speechSynthesis.resume();
       speechSynthesis.speak(utterance);
+
+      // Start bleed detection on first TTS (only once per session)
+      if (micBleedDetected === null) {
+        console.log('First TTS - starting bleed detection');
+        startBleedDetection();
+      }
     }
 
     function stopSpeaking() {
@@ -2277,8 +2371,11 @@ Be concise and direct in your responses. Focus on being helpful and informative.
           return;
         }
 
+        // If speaking, tap interrupts and starts recording
         if (isSpeaking || speechQueue.length > 0) {
           stopSpeaking();
+          startRecording();
+          return;
         }
 
         // Start a timer - if held long enough, enter continuous mode
@@ -2355,8 +2452,11 @@ Be concise and direct in your responses. Focus on being helpful and informative.
           return;
         }
 
+        // If speaking, tap interrupts and starts recording
         if (isSpeaking || speechQueue.length > 0) {
           stopSpeaking();
+          startRecording();
+          return;
         }
 
         // Set timer to enter continuous mode after hold threshold
@@ -2580,30 +2680,6 @@ Be concise and direct in your responses. Focus on being helpful and informative.
 
       // Exit continuous mode button
       exitContinuousBtn.addEventListener('click', exitContinuousMode);
-
-      // Continuous mode toggle
-      continuousToggle.addEventListener('change', (e) => {
-        if (e.target.checked) {
-          enterContinuousMode();
-        } else {
-          exitContinuousMode();
-        }
-      });
-
-      // Also handle click on the toggle container for better mobile support
-      const continuousToggleContainer = document.getElementById('continuousToggleContainer');
-      continuousToggleContainer.addEventListener('click', (e) => {
-        // Don't double-trigger if clicking directly on the checkbox
-        if (e.target === continuousToggle) return;
-        // Toggle the checkbox
-        continuousToggle.checked = !continuousToggle.checked;
-        // Manually trigger the change
-        if (continuousToggle.checked) {
-          enterContinuousMode();
-        } else {
-          exitContinuousMode();
-        }
-      });
 
       // Voice modal
       modalClose.addEventListener('click', closeVoiceSettings);
