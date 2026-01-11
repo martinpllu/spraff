@@ -21,7 +21,7 @@
       };
     }
 
-    const APP_VERSION = '94bb79';
+    const APP_VERSION = 'c099db';
     console.log('Spraff version:', APP_VERSION);
     window.dbg('app.js loaded, version: ' + APP_VERSION);
 
@@ -1159,9 +1159,9 @@
         // - Long utterances (>2s): likely thinking pause - wait longer
         const VERY_SHORT_UTTERANCE_MS = 600;
         const MEDIUM_UTTERANCE_MS = 2000;
-        const VERY_SHORT_WAIT_MS = 300;    // Quick response for "yes/no"
-        const MEDIUM_WAIT_MS = 1000;       // Moderate wait for medium speech
-        const LONG_WAIT_MS = 2000;         // 2 seconds for extended speech with thinking pauses
+        const VERY_SHORT_WAIT_MS = 150;    // Quick response for "yes/no"
+        const MEDIUM_WAIT_MS = 500;        // Moderate wait for medium speech
+        const LONG_WAIT_MS = 1000;         // 1 second for extended speech with thinking pauses
 
         function processPendingAudio() {
           if (pendingAudio && isListening && continuousModeActive) {
