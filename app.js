@@ -133,6 +133,13 @@
     let micPermissionGranted = false; // Track if mic permission has been granted
     const BLEED_DETECTION_WINDOW_MS = 1500; // Listen for bleed during first 1.5s of first response
 
+    // Semantic utterance continuation - when LLM detects incomplete speech
+    let pendingUtteranceTranscript = null; // Transcript from incomplete utterance
+    let waitingForContinuation = false; // Flag to indicate we're waiting for more speech
+
+    // Request cancellation - abort API request if user starts speaking
+    let currentRequestController = null; // AbortController for current API request
+
     // Stats
     const stats = {
       sessionCost: 0,
@@ -1190,13 +1197,9 @@
 
           onSpeechStart: () => {
             console.log('VAD: Speech start detected');
-            isCollectingSpeech = true;
-            collectedFrames = [];
 
-            // Cancel any pending send - user is speaking again
-            cancelPendingAudio();
-
-            // Check for mic bleed during detection window
+            // FIRST: Check for mic bleed during detection window
+            // This must come before any other actions to avoid false interruptions
             if (isDetectingBleed) {
               console.log('VAD: Mic bleed detected during TTS');
               if (window.dbg) window.dbg('BLEED RESULT: YES BLEED - interruption OFF');
@@ -1204,8 +1207,29 @@
               interruptionEnabled = false;
               isDetectingBleed = false;
               updateBleedStatus();
-              isCollectingSpeech = false;
+              // Don't collect frames or take any action - this is just speaker bleed
               return;
+            }
+
+            // Now we know this is real user speech, not bleed
+            isCollectingSpeech = true;
+            collectedFrames = [];
+
+            // Cancel any pending send - user is speaking again
+            cancelPendingAudio();
+
+            // Abort any in-flight API request - user is speaking more
+            if (currentRequestController) {
+              console.log('VAD: Aborting in-flight API request - user speaking');
+              if (window.dbg) window.dbg('Aborting API request - more speech');
+              currentRequestController.abort();
+              currentRequestController = null;
+            }
+
+            // Stop any TTS that might be playing (user is interrupting)
+            if (isSpeaking) {
+              console.log('VAD: Stopping TTS - user interrupting');
+              stopSpeaking();
             }
 
             // Handle interruption if enabled and speaking
@@ -1524,6 +1548,10 @@
         cancelRecording();
       }
 
+      // Clear any pending utterance continuation
+      pendingUtteranceTranscript = null;
+      waitingForContinuation = false;
+
       // Update UI
       mainButton.classList.remove('continuous-mode');
       exitContinuousBtn.classList.add('hidden');
@@ -1714,16 +1742,33 @@ CRITICAL REQUIREMENTS:
 <transcribe the user's spoken words here>
 [/USER]
 
+2. INCOMPLETE SPEECH DETECTION: After transcribing, assess whether the user's speech appears COMPLETE or INCOMPLETE. Speech is INCOMPLETE if:
+- It ends mid-sentence (e.g., "I was thinking about..." or "What do you think of...")
+- It ends with conjunctions like "and", "but", "so", "because", "however"
+- It ends with filler words like "um", "uh", "like", or trailing off
+- The sentence structure is clearly unfinished
+- It sounds like the user was interrupted or cut off
+
+If the speech is INCOMPLETE, respond with ONLY:
+[USER]
+<transcription>
+[/USER]
+[WAITING]
+
+Do NOT provide any other response - just the transcript and [WAITING] tag. The system will continue recording and send you the complete utterance.
+
+If the speech is COMPLETE, respond normally with your answer.
+
 <your response here>
 
-2. SPEECH-FRIENDLY OUTPUT: Your response will be converted to speech, so you MUST:
+3. SPEECH-FRIENDLY OUTPUT: Your response will be converted to speech, so you MUST:
 - Be concise and conversational
 - NEVER include URLs or links - they sound terrible spoken aloud. Describe sources naturally, e.g. "according to Simon Willison's blog" not "according to simonwillison.net"
 - NEVER use domain names like ".com", ".io", ".net", etc.
 - Avoid all technical formatting, code, or special characters
 - No lists or bullet points - use flowing sentences instead
 
-3. TOOLS: You have access to a web_search tool. To use it, include the following AFTER your [USER] transcript:
+4. TOOLS: You have access to a web_search tool. To use it, include the following AFTER your [USER] transcript:
 
 \`\`\`tool_call
 {"tool": "web_search"}
@@ -1737,6 +1782,10 @@ Respond naturally as if having a spoken conversation.`;
     async function sendAudioToAPI(base64Audio) {
       shouldStopSpeaking = false;
       speechQueue = [];
+
+      // Create AbortController for this request
+      currentRequestController = new AbortController();
+      const signal = currentRequestController.signal;
 
       // Calculate and store voice message size (base64 to bytes: ~75% of base64 length)
       const audioSizeBytes = Math.round(base64Audio.length * 0.75);
@@ -1772,6 +1821,7 @@ Respond naturally as if having a spoken conversation.`;
       try {
         const response = await fetch(`${OPENROUTER_API_URL}/chat/completions`, {
           method: 'POST',
+          signal: signal,
           headers: {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
@@ -1838,6 +1888,45 @@ Respond naturally as if having a spoken conversation.`;
         const endTagIndex = fullResponse.indexOf('[/USER]');
         if (endTagIndex !== -1) {
           responseOnly = fullResponse.slice(endTagIndex + 7).trim();
+        }
+
+        // Check for [WAITING] tag - LLM detected incomplete speech
+        if (responseOnly.includes('[WAITING]') || fullResponse.includes('[WAITING]')) {
+          console.log('LLM detected incomplete speech, waiting for continuation');
+          if (window.dbg) window.dbg('WAITING: LLM detected incomplete speech');
+
+          // Store the transcript for later combination
+          if (userTranscript) {
+            if (pendingUtteranceTranscript) {
+              // Append to existing pending transcript
+              pendingUtteranceTranscript += ' ' + userTranscript;
+            } else {
+              pendingUtteranceTranscript = userTranscript;
+            }
+            console.log('Pending transcript:', pendingUtteranceTranscript);
+          }
+
+          waitingForContinuation = true;
+
+          // Update stats if available
+          if (usage && typeof usage.cost === 'number') {
+            updateSessionCost(usage.cost);
+          }
+
+          // Resume listening for more speech
+          statusText.textContent = 'Listening...';
+          setButtonState('continuous-ready');
+          resumeVADAfterDelay(100);
+          return; // Exit without speaking or saving to history
+        }
+
+        // If we were waiting for continuation, prepend the pending transcript
+        if (pendingUtteranceTranscript && userTranscript) {
+          console.log('Combining pending transcript with new speech');
+          userTranscript = pendingUtteranceTranscript + ' ' + userTranscript;
+          pendingUtteranceTranscript = null;
+          waitingForContinuation = false;
+          if (window.dbg) window.dbg('Combined transcript: ' + userTranscript);
         }
 
         // Check for tool calls
@@ -1930,10 +2019,19 @@ Respond naturally as if having a spoken conversation.`;
             }
 
       } catch (error) {
+        // Check if this was an intentional abort (user started speaking)
+        if (error.name === 'AbortError') {
+          console.log('API request aborted - user started speaking');
+          if (window.dbg) window.dbg('Request aborted - user speaking');
+          // Don't show error or change state - VAD will handle the new speech
+          return;
+        }
         console.error('API error:', error);
         showError(error.message);
         setButtonState('ready');
         stopBtn.classList.add('hidden');
+      } finally {
+        currentRequestController = null;
       }
     }
 
