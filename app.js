@@ -1159,9 +1159,9 @@
         // - Long utterances (>2s): likely thinking pause - wait longer
         const VERY_SHORT_UTTERANCE_MS = 600;
         const MEDIUM_UTTERANCE_MS = 2000;
-        const VERY_SHORT_WAIT_MS = 400;    // Quick response for "yes/no"
-        const MEDIUM_WAIT_MS = 2000;       // Moderate wait for medium speech
-        const LONG_WAIT_MS = 4000;         // 4 seconds for extended speech with thinking pauses
+        const VERY_SHORT_WAIT_MS = 300;    // Quick response for "yes/no"
+        const MEDIUM_WAIT_MS = 1000;       // Moderate wait for medium speech
+        const LONG_WAIT_MS = 2000;         // 2 seconds for extended speech with thinking pauses
 
         function processPendingAudio() {
           if (pendingAudio && isListening && continuousModeActive) {
@@ -1742,6 +1742,13 @@ CRITICAL REQUIREMENTS:
 <transcribe the user's spoken words here>
 [/USER]
 
+CRITICAL TRANSCRIPTION RULES:
+- Transcribe ONLY what you actually hear - NEVER add words, phrases, or sentences that weren't spoken
+- If the audio cuts off mid-sentence, transcribe exactly what was said and stop there - do NOT complete the sentence
+- Include filler words (um, uh, like) and hesitations exactly as spoken
+- If audio is unclear or cuts off, indicate with "..." - do NOT guess or hallucinate what might have been said
+- NEVER invent content the user didn't say - this is extremely important
+
 2. INCOMPLETE SPEECH DETECTION: After transcribing, assess whether the user's speech appears COMPLETE or INCOMPLETE. Speech is INCOMPLETE if:
 - It ends mid-sentence (e.g., "I was thinking about..." or "What do you think of...")
 - It ends with conjunctions like "and", "but", "so", "because", "however"
@@ -1791,6 +1798,22 @@ Respond naturally as if having a spoken conversation.`;
       const audioSizeBytes = Math.round(base64Audio.length * 0.75);
       stats.lastVoiceSize = audioSizeBytes;
 
+      // Build user message content - include pending transcript if continuing
+      let userContent;
+      if (pendingUtteranceTranscript) {
+        // User is continuing from an incomplete utterance
+        // Include the prior transcript as text context before the new audio
+        console.log('Including pending transcript in request:', pendingUtteranceTranscript);
+        userContent = [
+          { type: 'text', text: `[CONTINUATION] The user previously said: "${pendingUtteranceTranscript}" but was cut off. The following audio is their continuation. Combine both parts when transcribing and responding.` },
+          { type: 'input_audio', input_audio: { data: base64Audio, format: 'wav' } }
+        ];
+      } else {
+        userContent = [
+          { type: 'input_audio', input_audio: { data: base64Audio, format: 'wav' } }
+        ];
+      }
+
       // Build request body
       const requestBody = JSON.stringify({
         model: getModel(),
@@ -1800,9 +1823,7 @@ Respond naturally as if having a spoken conversation.`;
           ...conversationHistory,
           {
             role: 'user',
-            content: [
-              { type: 'input_audio', input_audio: { data: base64Audio, format: 'wav' } }
-            ]
+            content: userContent
           }
         ],
         provider: {
@@ -1920,13 +1941,12 @@ Respond naturally as if having a spoken conversation.`;
           return; // Exit without speaking or saving to history
         }
 
-        // If we were waiting for continuation, prepend the pending transcript
-        if (pendingUtteranceTranscript && userTranscript) {
-          console.log('Combining pending transcript with new speech');
-          userTranscript = pendingUtteranceTranscript + ' ' + userTranscript;
+        // If we were waiting for continuation, just clear the pending state
+        // (The LLM already combined the transcripts via the [CONTINUATION] context we sent)
+        if (pendingUtteranceTranscript) {
+          console.log('Clearing pending transcript (LLM already combined it)');
           pendingUtteranceTranscript = null;
           waitingForContinuation = false;
-          if (window.dbg) window.dbg('Combined transcript: ' + userTranscript);
         }
 
         // Check for tool calls
