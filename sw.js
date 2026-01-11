@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spraff-v1';
+const CACHE_NAME = 'spraff-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

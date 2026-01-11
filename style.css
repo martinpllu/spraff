@@ -536,6 +536,26 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+/* Bleed detection status */
+.bleed-status {
+  position: fixed;
+  bottom: 75px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--fg-muted);
+  opacity: 0.8;
+  text-align: center;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.bleed-status:empty {
+  display: none;
+}
+
 /* Top Menu */
 .top-menu {
   position: fixed;
@@ -1165,6 +1185,7 @@ body {
   z-index: 1;
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
   transform: translateX(10%);
   transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
   -webkit-overflow-scrolling: touch;
@@ -1173,6 +1194,7 @@ body {
 .conversation-history.visible {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
   transform: translateX(0);
 }
 

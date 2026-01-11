@@ -80,9 +80,41 @@
         <p style="color: var(--fg-muted);">
           Created by <a href="https://www.linkedin.com/in/martin-pllu-7034513" target="_blank" style="color: var(--link); text-decoration: none;">Martin Pllu</a>
         </p>
+        <p style="color: var(--fg-muted); font-size: 0.8rem; margin-top: 1rem;">Version: 29c98b</p>
       </div>
     </div>
   </div>
+
+  <!-- Debug Modal - Full Screen -->
+  <div class="modal-overlay hidden" id="debugModal" onclick="if(event.target===this)this.classList.add('hidden')" style="padding: 0;">
+    <div class="modal" style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; border-radius: 0; margin: 0;">
+      <div class="modal-header">
+        <h3>Debug Console</h3>
+        <button class="modal-close" id="debugModalClose" onclick="document.getElementById('debugModal').classList.add('hidden')">&times;</button>
+      </div>
+      <div class="modal-body" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+        <div id="debugLog" style="font-family: monospace; font-size: 0.85rem; flex: 1; overflow-y: auto; background: var(--surface); padding: 0.75rem; border-radius: 4px; white-space: pre-wrap; word-break: break-all; line-height: 1.4;"></div>
+        <button id="debugClearBtn" onclick="window.debugLogs.length=0;document.getElementById('debugLog').textContent='Cleared';" style="margin-top: 0.5rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 4px;">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Early debug script - runs before app.js -->
+  <script>
+    window.debugLogs = [];
+    window.dbg = function(msg) {
+      var time = new Date().toLocaleTimeString();
+      var entry = '[' + time + '] ' + msg;
+      window.debugLogs.push(entry);
+      var el = document.getElementById('debugLog');
+      if (el) el.textContent = window.debugLogs.join('\n');
+    };
+    window.onerror = function(msg, src, line, col) {
+      window.dbg('ERROR: ' + msg + ' at ' + src + ':' + line + ':' + col);
+      return false;
+    };
+    window.dbg('Debug initialized');
+  </script>
 
   <!-- Privacy Modal -->
   <div class="modal-overlay hidden" id="privacyModal">
@@ -238,6 +270,14 @@
             </svg>
             Privacy
           </button>
+          <button id="debugBtn" onclick="document.getElementById('debugModal').classList.remove('hidden'); document.getElementById('settingsDropdown').classList.remove('open'); document.getElementById('debugLog').textContent = window.debugLogs ? window.debugLogs.join('\\n') : 'No logs';">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/>
+              <path d="M2 12l10 5 10-5"/>
+            </svg>
+            Debug
+          </button>
           <button id="logoutBtn">
             <svg viewBox="0 0 24 24">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -289,6 +329,9 @@
       Push button or <kbd>Space</kbd> to speak
     </div>
 
+    <!-- Bleed detection status -->
+    <div class="bleed-status" id="bleedStatus"></div>
+
     <!-- Bottom Bar - controls only -->
     <div class="bottom-bar" id="bottomBar">
       <div class="mode-toggle" id="modeToggle">
@@ -338,6 +381,7 @@
 
   <div class="error-toast" id="errorToast"></div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=94bb79"></script>
+  <script>window.dbg('After app.js script tag');</script>
 </body>
 </html>

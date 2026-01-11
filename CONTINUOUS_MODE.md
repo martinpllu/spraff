@@ -6,112 +6,123 @@
 
 Adding a continuous conversation mode to Spraff where users can have a hands-free chat. The key challenge is **mic bleed** - when the assistant speaks through speakers, VAD (Voice Activity Detection) may detect it as user speech, causing infinite loops.
 
-## Current Status: Bleed Detection Not Working on Mobile
+## Current Status: Voice Interruption Working, Short Utterances Being Missed
 
-**VAD initialization is FIXED** - works on desktop. Continuous mode works on desktop.
+**Date**: January 2025
+**Version**: 29c98b
 
-**Current issue**: Mic bleed detection and interruption feature not working on mobile (Android tested). The bleed status indicator doesn't appear after first TTS response.
+### What's Working
+- Bleed detection runs on first TTS after mic permission granted
+- Voice interruption works when no bleed detected
+- Interruption works on ALL TTS responses (not just first one) - fixed by ensuring VAD runs during TTS when `interruptionEnabled=true`
+- Debug console accessible via Menu > Debug
+- Version displayed in About modal
+
+### Current Issue
+**Short utterances (single words like "yes", "no") are being missed by VAD**
+
+This is likely a VAD sensitivity issue. Current VAD config in `initializeVAD()`:
+```javascript
+positiveSpeechThreshold: 0.8,  // May be too high for short words
+negativeSpeechThreshold: 0.3,
+redemptionFrames: 8,
+minSpeechFrames: 4,  // Minimum frames before triggering - may filter out short words
+preSpeechPadFrames: 3,
+```
+
+Possible fixes to try:
+1. Lower `positiveSpeechThreshold` (e.g., 0.6 or 0.5)
+2. Reduce `minSpeechFrames` (e.g., 2 or 3)
+3. Reduce `redemptionFrames` for faster detection
 
 ## Git Branch
 
 Working on branch: `continuous-talking`
 
-Recent commits:
-1. `feat: add continuous conversation mode with VAD` - Core VAD integration
-2. `test: add Playwright e2e tests for continuous mode` - Test infrastructure
-3. `feat: add toggle switch for continuous mode, simplify button interactions` - UI changes (toggle later removed)
+**Uncommitted changes**:
+- Mic bleed detection and voice interruption feature
+- Debug console
+- Service worker disabled for debugging
+- Cache-busting versioning system
 
-**Uncommitted changes**: Mic bleed detection and interruption feature
+## Key Fixes Made This Session
 
-## What's Working
+1. **Debug console not showing logs**: app.js was overwriting `window.debugLogs` array. Fixed by using existing array: `const debugLogs = window.debugLogs || [];`
 
-### Continuous Mode (Desktop)
-- **Hold button 500ms**: Enters continuous mode
-- **Tap while in continuous mode**: Exits continuous mode
-- **Escape key**: Exits continuous mode
-- **Exit button**: Exits continuous mode
-- **VAD**: Detects speech start/end, auto-records
-- **Mic bleed prevention**: VAD pauses during TTS + 600ms buffer
+2. **Bleed detection not running on mobile**: `micPermissionGranted` flag wasn't being set when VAD initialized (only when `startRecording()` called). Fixed by setting flag in `initializeVAD()` too.
 
-### VAD Library Setup (FIXED)
-Using older compatible versions:
-```html
-<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort.js"></script>
-<script>
-  ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/';
-</script>
-<script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.19/dist/bundle.min.js"></script>
+3. **Voice interruption only working on first TTS**: VAD was being suppressed during ALL TTS in continuous mode. Fixed by only suppressing when `!interruptionEnabled`:
+   ```javascript
+   if (continuousModeActive && !interruptionEnabled) {
+     suppressVAD();
+   } else if (interruptionEnabled && vadInstance) {
+     vadInstance.start();
+   }
+   ```
+
+4. **Cache issues on mobile**: Added cache-busting query param to app.js script tag and moved version to About modal.
+
+## How Bleed Detection Works
+
+### Flow
+1. User records voice → mic permission granted → `micPermissionGranted = true`
+2. TTS plays → `startBleedDetection()` called (first TTS only)
+3. VAD initialized and starts listening for 1.5 seconds
+4. If VAD detects speech during TTS → bleed detected → `interruptionEnabled = false`
+5. If no speech detected → no bleed → `interruptionEnabled = true`
+
+### During Subsequent TTS
+- If `interruptionEnabled=true`: VAD runs during TTS to allow voice interruption
+- If `interruptionEnabled=false`: VAD suppressed during TTS to prevent bleed loop
+
+### Interruption Behavior
+- **Tap while speaking**: ALWAYS works (stops TTS, starts recording)
+- **Voice interrupt**: Only works if `interruptionEnabled = true` (no bleed detected)
+
+## Debug Console
+
+Access via Menu > Debug. Key log messages:
+- `MIC GRANTED via startRecording` / `MIC GRANTED via VAD init`
+- `BLEED CHECK: micPermissionGranted=...`
+- `BLEED DETECTING...`
+- `BLEED RESULT: NO BLEED - interruption ON` / `BLEED RESULT: YES BLEED - interruption OFF`
+- `VAD running for interruption during TTS`
+- `Restarting VAD for interruption`
+
+## Version Management
+
+See `CLAUDE.md` for version update instructions. Generate new version:
+```bash
+head -c 3 /dev/urandom | xxd -p
 ```
 
-### Button Interaction Model
-- **Tap**: Toggle recording on/off (start/stop)
-- **Hold 500ms**: Enter continuous mode
-- **Tap while speaking**: Interrupt TTS and start recording
-- **Tap in continuous mode**: Exit continuous mode
+Update in two places:
+1. `index.html` About modal: `Version: XXXXXX`
+2. `index.html` script tag: `app.js?v=XXXXXX`
 
-## What's NOT Working
-
-### Mic Bleed Detection on Mobile
-The feature should:
-1. On first TTS response, start VAD in "detection mode" for 1.5 seconds
-2. If VAD triggers during that window → mic bleed detected → disable voice interruption
-3. If no VAD trigger → no bleed → enable voice interruption
-4. Show status: "Audio bleed: yes (tap to interrupt)" or "Audio bleed: no (voice interrupts)"
-
-**Problem**: On mobile, no status indicator appears. Detection doesn't seem to run.
-
-**Possible causes**:
-- VAD initialization failing silently on mobile
-- Microphone permission not granted at time of first TTS
-- `startBleedDetection()` not being called (different code path?)
-- Console errors not visible
-
-**Debug logging added**:
-- `console.log('First TTS - starting bleed detection')` in processQueue
-- `console.log('Starting mic bleed detection...')` in startBleedDetection
-- `console.log('VAD: Mic bleed detected during TTS')` when bleed detected
-- `console.log('No mic bleed detected - interruption enabled')` when no bleed
-
-## Key Code Locations
-
-| Feature | File | Lines (approx) |
-|---------|------|----------------|
-| Bleed detection state vars | app.js | 106-110 |
-| VAD onSpeechStart (bleed check) | app.js | 1117-1140 |
-| startBleedDetection() | app.js | 1167-1198 |
-| updateBleedStatus() | app.js | 1200-1229 |
-| Call to startBleedDetection | app.js | 2106-2109 |
-| Tap-to-interrupt (mouse) | app.js | 2367-2372 |
-| Tap-to-interrupt (touch) | app.js | 2448-2453 |
-| initializeVAD() | app.js | 1098-1164 |
-| enterContinuousMode() | app.js | ~1285 |
-| exitContinuousMode() | app.js | ~1310 |
-| VAD library scripts | index.html | 19-25 |
-| Continuous mode styles | style.css | ~500+ |
-
-## State Variables for Bleed Detection
+## State Variables
 
 ```javascript
 let micBleedDetected = null; // null = not yet tested, true = bleed, false = no bleed
 let isDetectingBleed = false;
 let interruptionEnabled = false;
+let micPermissionGranted = false;
 const BLEED_DETECTION_WINDOW_MS = 1500;
 ```
 
-## Next Steps for New Agent
+## VAD Configuration (Current)
 
-1. **Debug on mobile**: Check browser console for errors during first TTS
-   - Connect Android device to Chrome DevTools via `chrome://inspect`
-   - Look for the debug console.log messages
-   - Check if VAD initialization succeeds on mobile
-
-2. **Check microphone permissions**: VAD needs mic access. On mobile, this might not be granted until user first records. Consider:
-   - Request mic permission earlier (on page load or first user interaction)
-   - Or skip bleed detection until user has recorded at least once
-
-3. **Test on desktop first**: Verify bleed detection works on desktop before debugging mobile
-
-4. **If VAD fails on mobile**: May need to initialize VAD on first user recording, then run bleed detection on second TTS response
+```javascript
+vadInstance = await vad.MicVAD.new({
+  positiveSpeechThreshold: 0.8,
+  negativeSpeechThreshold: 0.3,
+  redemptionFrames: 8,
+  minSpeechFrames: 4,
+  preSpeechPadFrames: 3,
+  submitUserSpeechOnPause: false,
+  // ... callbacks
+});
+```
 
 ## Running the App
 
@@ -133,12 +144,26 @@ npm install
 npm test
 ```
 
-## Quick Visual Test
-
-To verify you're seeing latest code on mobile, the menu currently says "spraff 4" - change this number to confirm updates are reaching the device.
-
 ## VAD Library Reference
 
 - NPM: https://www.npmjs.com/package/@ricky0123/vad-web
 - GitHub: https://github.com/ricky0123/vad
 - Docs: https://docs.vad.ricky0123.com/
+
+## Next Steps for New Agent
+
+1. **Fix short utterance detection**: Adjust VAD parameters to catch single words like "yes", "no"
+   - Try lowering `positiveSpeechThreshold` to 0.5-0.6
+   - Try reducing `minSpeechFrames` to 2-3
+   - Test with various short words
+
+2. **Clean up debug code**: Once stable, consider removing or reducing debug logging
+
+3. **Re-enable service worker**: Currently disabled for debugging. Re-enable when ready:
+   ```javascript
+   if ('serviceWorker' in navigator) {
+     navigator.serviceWorker.register('./sw.js').catch(() => {});
+   }
+   ```
+
+4. **Commit changes**: All the bleed detection and interruption work is uncommitted

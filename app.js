@@ -1,6 +1,29 @@
+    // Temporarily disable service worker for debugging
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(reg => reg.unregister());
+      });
     }
+
+    // ============ Debug Console ============
+    // Use existing debugLogs from HTML script, or create new one
+    const debugLogs = window.debugLogs || [];
+    window.debugLogs = debugLogs;
+
+    // Use existing dbg function or enhance it
+    if (!window.dbg) {
+      window.dbg = function(msg) {
+        const time = new Date().toLocaleTimeString();
+        const entry = '[' + time + '] ' + msg;
+        debugLogs.push(entry);
+        const el = document.getElementById('debugLog');
+        if (el) el.textContent = debugLogs.join('\n');
+      };
+    }
+
+    const APP_VERSION = '94bb79';
+    console.log('Spraff version:', APP_VERSION);
+    window.dbg('app.js loaded, version: ' + APP_VERSION);
 
     // ============ Configuration ============
     const OPENROUTER_AUTH_URL = 'https://openrouter.ai/auth';
@@ -107,6 +130,7 @@
     let micBleedDetected = null; // null = not yet tested, true = bleed, false = no bleed
     let isDetectingBleed = false;
     let interruptionEnabled = false;
+    let micPermissionGranted = false; // Track if mic permission has been granted
     const BLEED_DETECTION_WINDOW_MS = 1500; // Listen for bleed during first 1.5s of first response
 
     // Stats
@@ -148,6 +172,10 @@
     const privacyModal = document.getElementById('privacyModal');
     const privacyModalClose = document.getElementById('privacyModalClose');
     const privacyBtn = document.getElementById('privacyBtn');
+    const debugModal = document.getElementById('debugModal');
+    const debugModalClose = document.getElementById('debugModalClose');
+    const debugBtn = document.getElementById('debugBtn');
+    const debugClearBtn = document.getElementById('debugClearBtn');
     const errorToast = document.getElementById('errorToast');
     const installBtn = document.getElementById('installBtn');
     const installModal = document.getElementById('installModal');
@@ -165,6 +193,7 @@
 
     // ============ Initialization ============
     function init() {
+      if (window.dbg) window.dbg('init() called');
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
 
@@ -879,6 +908,7 @@
 
     // ============ Audio Recording ============
     async function startRecording() {
+      if (window.dbg) window.dbg('startRecording CALLED');
       try {
         audioChunks = [];
 
@@ -913,6 +943,9 @@
           }
         };
         audioStream = await navigator.mediaDevices.getUserMedia(constraints);
+        micPermissionGranted = true; // Mic permission was granted
+        console.log('startRecording: mic permission granted');
+        if (window.dbg) window.dbg('MIC GRANTED via startRecording');
 
         // iOS Safari: unlock audio context and speech synthesis on user gesture
         if (!window.audioUnlocked) {
@@ -1106,24 +1139,72 @@
       }
 
       try {
+        // Collect audio frames ourselves to handle misfires
+        let collectedFrames = [];
+        let isCollectingSpeech = false;
+        let speechStartTime = 0;
+        let pendingAudio = null;
+        let pendingTimeout = null;
+
+        // Adaptive pause detection based on industry research:
+        // - Very short utterances (<600ms): likely "yes", "no" - send quickly
+        // - Medium utterances (600ms-2s): might be complete thought - moderate wait
+        // - Long utterances (>2s): likely thinking pause - wait longer
+        const VERY_SHORT_UTTERANCE_MS = 600;
+        const MEDIUM_UTTERANCE_MS = 2000;
+        const VERY_SHORT_WAIT_MS = 400;    // Quick response for "yes/no"
+        const MEDIUM_WAIT_MS = 2000;       // Moderate wait for medium speech
+        const LONG_WAIT_MS = 4000;         // 4 seconds for extended speech with thinking pauses
+
+        function processPendingAudio() {
+          if (pendingAudio && isListening && continuousModeActive) {
+            console.log('VAD: Processing pending audio after pause');
+            stopContinuousModeRecording(pendingAudio);
+          }
+          pendingAudio = null;
+          pendingTimeout = null;
+        }
+
+        function cancelPendingAudio() {
+          if (pendingTimeout) {
+            clearTimeout(pendingTimeout);
+            pendingTimeout = null;
+          }
+          // Keep pendingAudio in case we need to combine it with new speech
+        }
+
         vadInstance = await vad.MicVAD.new({
-          positiveSpeechThreshold: 0.8,
-          negativeSpeechThreshold: 0.3,
+          positiveSpeechThreshold: 0.5,
+          negativeSpeechThreshold: 0.15,
           redemptionFrames: 8,
-          minSpeechFrames: 4,
-          preSpeechPadFrames: 3,
+          minSpeechFrames: 1,
+          preSpeechPadFrames: 5,
           submitUserSpeechOnPause: false,
+
+          onFrameProcessed: (probs, frame) => {
+            // Collect frames while we think there's speech
+            if (isCollectingSpeech) {
+              collectedFrames.push(new Float32Array(frame));
+            }
+          },
 
           onSpeechStart: () => {
             console.log('VAD: Speech start detected');
+            isCollectingSpeech = true;
+            collectedFrames = [];
+
+            // Cancel any pending send - user is speaking again
+            cancelPendingAudio();
 
             // Check for mic bleed during detection window
             if (isDetectingBleed) {
               console.log('VAD: Mic bleed detected during TTS');
+              if (window.dbg) window.dbg('BLEED RESULT: YES BLEED - interruption OFF');
               micBleedDetected = true;
               interruptionEnabled = false;
               isDetectingBleed = false;
               updateBleedStatus();
+              isCollectingSpeech = false;
               return;
             }
 
@@ -1132,29 +1213,100 @@
               console.log('VAD: User interruption detected');
               stopSpeaking();
               startRecording();
+              isCollectingSpeech = false;
               return;
             }
 
-            if (vadSuppressed || isSpeaking || !continuousModeActive) return;
+            if (vadSuppressed || isSpeaking || !continuousModeActive) {
+              isCollectingSpeech = false;
+              return;
+            }
+
+            // If we had pending audio from a previous segment, we're continuing
+            if (pendingAudio) {
+              console.log('VAD: Continuing speech after pause');
+              pendingAudio = null;  // Will be combined when this segment ends
+            } else {
+              speechStartTime = Date.now();
+            }
+
             startContinuousModeRecording();
           },
 
           onSpeechEnd: (audio) => {
             console.log('VAD: Speech end detected');
-            if (vadSuppressed || isSpeaking || !continuousModeActive) return;
-            if (!isListening) return;
-            stopContinuousModeRecording(audio);
+            isCollectingSpeech = false;
+
+            if (vadSuppressed || isSpeaking || !continuousModeActive) {
+              collectedFrames = [];
+              return;
+            }
+            if (!isListening) {
+              collectedFrames = [];
+              return;
+            }
+
+            // Combine with any pending audio from previous segments
+            let finalAudio = audio;
+            if (pendingAudio) {
+              const combined = new Float32Array(pendingAudio.length + audio.length);
+              combined.set(pendingAudio, 0);
+              combined.set(audio, pendingAudio.length);
+              finalAudio = combined;
+              console.log('VAD: Combined audio segments, total length:', finalAudio.length);
+            }
+
+            const speechDuration = Date.now() - speechStartTime;
+            console.log('VAD: Speech duration:', speechDuration, 'ms');
+
+            // Adaptive wait time based on utterance length
+            let waitTime;
+            if (speechDuration < VERY_SHORT_UTTERANCE_MS) {
+              // Very short utterance (<600ms) - likely "yes", "no", "okay"
+              waitTime = VERY_SHORT_WAIT_MS;
+              console.log('VAD: Very short utterance, waiting', waitTime, 'ms');
+            } else if (speechDuration < MEDIUM_UTTERANCE_MS) {
+              // Medium utterance (600ms-2s) - probably complete thought
+              waitTime = MEDIUM_WAIT_MS;
+              console.log('VAD: Medium utterance, waiting', waitTime, 'ms');
+            } else {
+              // Long utterance (>2s) - might be thinking pause
+              waitTime = LONG_WAIT_MS;
+              console.log('VAD: Long utterance, waiting', waitTime, 'ms');
+            }
+
+            pendingAudio = finalAudio;
+            collectedFrames = [];
+            pendingTimeout = setTimeout(processPendingAudio, waitTime);
           },
 
           onVADMisfire: () => {
-            console.log('VAD: Misfire - speech too short');
-            if (isListening && continuousModeActive) {
-              cancelRecording();
-              setButtonState('continuous-ready');
+            console.log('VAD: Misfire - using collected frames instead');
+            if (window.dbg) window.dbg('VAD MISFIRE - using ' + collectedFrames.length + ' frames');
+            isCollectingSpeech = false;
+
+            // Use our collected frames instead of discarding
+            if (collectedFrames.length > 0 && isListening && continuousModeActive) {
+              // Concatenate all frames into one Float32Array
+              const totalLength = collectedFrames.reduce((sum, f) => sum + f.length, 0);
+              const combinedAudio = new Float32Array(totalLength);
+              let offset = 0;
+              for (const frame of collectedFrames) {
+                combinedAudio.set(frame, offset);
+                offset += frame.length;
+              }
+              console.log('VAD: Processing misfire audio, length:', combinedAudio.length);
+              // Treat misfire same as short utterance - send immediately
+              stopContinuousModeRecording(combinedAudio);
             }
+            collectedFrames = [];
           }
         });
 
+        // VAD initialized successfully means mic permission was granted
+        micPermissionGranted = true;
+        console.log('VAD initialized, mic permission granted');
+        if (window.dbg) window.dbg('MIC GRANTED via VAD init');
         return vadInstance;
       } catch (error) {
         console.error('Failed to initialize VAD:', error);
@@ -1165,20 +1317,37 @@
 
     // Start bleed detection during first TTS response
     async function startBleedDetection() {
-      if (micBleedDetected !== null) return; // Already tested
+      if (micBleedDetected !== null) {
+        console.log('Bleed detection: already tested');
+        return;
+      }
+
+      // Can't run bleed detection until mic permission has been granted
+      // (VAD needs mic access which requires user gesture on mobile)
+      console.log('startBleedDetection: micPermissionGranted =', micPermissionGranted);
+      if (window.dbg) window.dbg('BLEED CHECK: micPermissionGranted=' + micPermissionGranted);
+      if (!micPermissionGranted) {
+        console.log('Bleed detection skipped - mic permission not yet granted');
+        if (window.dbg) window.dbg('BLEED SKIPPED - no mic');
+        updateBleedStatus('no-mic');
+        return;
+      }
 
       // Initialize VAD if needed (for bleed detection even outside continuous mode)
       if (!vadInstance) {
+        updateBleedStatus('init-vad');
         const vadReady = await initializeVAD();
         if (!vadReady) {
           console.log('Could not initialize VAD for bleed detection');
+          updateBleedStatus('vad-failed');
           return;
         }
       }
 
       console.log('Starting mic bleed detection...');
+      if (window.dbg) window.dbg('BLEED DETECTING...');
       isDetectingBleed = true;
-      updateBleedStatus(true); // Show "detecting..." status
+      updateBleedStatus('detecting');
       vadInstance.start();
 
       // After detection window, if no bleed detected, enable interruption
@@ -1189,6 +1358,7 @@
           micBleedDetected = false;
           interruptionEnabled = true;
           console.log('No mic bleed detected - interruption enabled');
+          if (window.dbg) window.dbg('BLEED RESULT: NO BLEED - interruption ON');
           updateBleedStatus();
         }
         // Keep VAD running for interruption if enabled, otherwise pause
@@ -1199,34 +1369,32 @@
     }
 
     // Update UI to show bleed detection status
-    function updateBleedStatus(detecting = false) {
-      const existingStatus = document.getElementById('bleedStatus');
-      if (existingStatus) {
-        existingStatus.remove();
-      }
+    function updateBleedStatus(state = null) {
+      const statusDiv = document.getElementById('bleedStatus');
+      if (!statusDiv) return;
 
-      const statusDiv = document.createElement('div');
-      statusDiv.id = 'bleedStatus';
-      statusDiv.style.cssText = `
-        position: fixed;
-        bottom: 70px;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 0.75rem;
-        color: var(--fg-muted);
-        opacity: 0.7;
-      `;
-
-      if (detecting) {
-        statusDiv.textContent = 'Detecting audio environment...';
-      } else if (micBleedDetected === null) {
-        return; // Don't show anything
+      // Debug states
+      if (state === 'no-mic') {
+        statusDiv.textContent = 'Bleed: waiting for mic';
+        statusDiv.style.color = '';
+      } else if (state === 'init-vad') {
+        statusDiv.textContent = 'Bleed: init VAD...';
+        statusDiv.style.color = '';
+      } else if (state === 'vad-failed') {
+        statusDiv.textContent = 'Bleed: VAD failed';
+        statusDiv.style.color = 'var(--error)';
+      } else if (state === 'detecting') {
+        statusDiv.textContent = 'Detecting audio...';
+        statusDiv.style.color = '';
+      } else if (micBleedDetected === true) {
+        statusDiv.textContent = 'Bleed: yes (tap to interrupt)';
+        statusDiv.style.color = '';
+      } else if (micBleedDetected === false) {
+        statusDiv.textContent = 'Bleed: no (voice interrupts)';
+        statusDiv.style.color = '';
       } else {
-        statusDiv.textContent = micBleedDetected
-          ? 'Audio bleed: yes (tap to interrupt)'
-          : 'Audio bleed: no (voice interrupts)';
+        statusDiv.textContent = ''; // Hide when empty
       }
-      document.body.appendChild(statusDiv);
     }
 
     function startContinuousModeRecording() {
@@ -2046,9 +2214,13 @@ Be concise and direct in your responses. Focus on being helpful and informative.
 
       isSpeaking = true;
 
-      // Suppress VAD while speaking
-      if (continuousModeActive) {
+      // Suppress VAD while speaking, UNLESS interruption is enabled (no bleed detected)
+      if (continuousModeActive && !interruptionEnabled) {
         suppressVAD();
+      } else if (interruptionEnabled && vadInstance) {
+        // Make sure VAD is running for voice interruption
+        vadInstance.start();
+        if (window.dbg) window.dbg('VAD running for interruption during TTS');
       }
       const text = speechQueue.shift();
       const textLength = text.length;
@@ -2112,7 +2284,14 @@ Be concise and direct in your responses. Focus on being helpful and informative.
       // Start bleed detection on first TTS (only once per session)
       if (micBleedDetected === null) {
         console.log('First TTS - starting bleed detection');
+        // Debug: show immediate status
+        const statusDiv = document.getElementById('bleedStatus');
+        if (statusDiv) statusDiv.textContent = 'TTS started...';
         startBleedDetection();
+      } else if (interruptionEnabled && vadInstance) {
+        // Restart VAD for voice interruption on subsequent TTS
+        if (window.dbg) window.dbg('Restarting VAD for interruption');
+        vadInstance.start();
       }
     }
 
@@ -2350,6 +2529,7 @@ Be concise and direct in your responses. Focus on being helpful and informative.
 
     // ============ Event Listeners ============
     function setupEventListeners() {
+      console.log('setupEventListeners START');
       loginBtn.addEventListener('click', startOAuthFlow);
       logoutBtn.addEventListener('click', () => {
         settingsDropdown.classList.remove('open');
@@ -2663,6 +2843,27 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         if (e.target === privacyModal) privacyModal.classList.add('hidden');
       });
 
+      // Debug modal
+      if (debugBtn && debugModal) {
+        debugBtn.addEventListener('click', () => {
+          settingsDropdown.classList.remove('open');
+          document.getElementById('debugLog').textContent = debugLogs.join('\n');
+          debugModal.classList.remove('hidden');
+        });
+        debugModalClose.addEventListener('click', () => {
+          debugModal.classList.add('hidden');
+        });
+        debugModal.addEventListener('click', (e) => {
+          if (e.target === debugModal) debugModal.classList.add('hidden');
+        });
+        debugClearBtn.addEventListener('click', () => {
+          debugLogs.length = 0;
+          document.getElementById('debugLog').textContent = '';
+        });
+      } else {
+        console.error('Debug elements not found:', { debugBtn, debugModal });
+      }
+
       // Install app
       installBtn.addEventListener('click', handleInstallClick);
       installModalClose.addEventListener('click', () => {
@@ -2717,7 +2918,12 @@ Be concise and direct in your responses. Focus on being helpful and informative.
       initDefaultVoice();
 
       // Mode switching - click anywhere in the toggle container to switch
-      modeToggle.addEventListener('click', () => setTextMode(!textMode));
+      modeToggle.addEventListener('click', () => {
+        console.log('Mode toggle clicked');
+        setTextMode(!textMode);
+      });
+      // Debug: confirm event listener is attached
+      console.log('Mode toggle listener attached', modeToggle);
 
       // Clear chat with inline confirmation
       let clearChatConfirming = false;
@@ -2857,7 +3063,7 @@ Be concise and direct in your responses. Focus on being helpful and informative.
         conversationHistoryEl.addEventListener('touchstart', handleTouchStart, { passive: true });
         conversationHistoryEl.addEventListener('touchend', handleTouchEnd, { passive: true });
       }
-
+      console.log('setupEventListeners END');
     }
 
     // ============ Start ============
