@@ -1,33 +1,45 @@
 # Claude Code Guidelines for Spraff
 
-## Version String
+## Development
 
-Use a random 6-character hex string as the version identifier. This serves two purposes:
-1. **Cache busting**: Used as query parameter for app.js to force browser refresh
-2. **Debug identification**: Displayed in the About modal to verify which version is running
+Spraff uses Vite + TypeScript for development and building. Use **pnpm** as the package manager.
 
-### Generating a new version
+### Development Commands
 
-Run this command to generate a new version string:
 ```bash
-head -c 3 /dev/urandom | xxd -p
+pnpm dev      # Start development server with HMR
+pnpm build    # Build for production
+pnpm preview  # Preview production build locally
 ```
 
-### Where to update
+### Project Structure
 
-When making code changes that need to be tested on mobile or verified:
+```
+src/
+  main.ts      # Entry point
+  types.ts     # TypeScript type definitions
+  config.ts    # Configuration constants
+  state.ts     # Application state management
+  dom.ts       # DOM element references
+  ui.ts        # UI updates and state management
+  markdown.ts  # Markdown parsing
+  audio.ts     # Audio recording and processing
+  speech.ts    # Text-to-speech
+  vad.ts       # Voice Activity Detection
+  oauth.ts     # OAuth authentication
+  api.ts       # API communication
+  events.ts    # Event listeners
+  style.css    # Styles
+public/
+  manifest.json
+  icons/
+```
 
-1. **index.html** - Update the script tag cache buster:
-   ```html
-   <script src="app.js?v=XXXXXX"></script>
-   ```
+### Cache Busting
 
-2. **index.html** - Update the About modal version display (inside `#aboutModal`):
-   ```html
-   <p style="color: var(--fg-muted); font-size: 0.8rem;">Version: XXXXXX</p>
-   ```
+Vite automatically handles cache busting with content hashes in production builds (e.g., `main-abc123.js`). No manual version strings needed.
 
-Both locations should use the same version string.
+For development, Vite's HMR ensures changes are reflected immediately.
 
 ## Debug Console
 

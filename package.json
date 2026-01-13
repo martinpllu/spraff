@@ -4,13 +4,19 @@
   "description": "Simple AI voice chat",
   "type": "module",
   "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
     "test": "playwright test",
     "test:mic-bleed": "playwright test tests/e2e/mic-bleed.spec.js",
-    "test:headed": "playwright test --headed",
-    "serve": "python3 -m http.server 3000"
+    "test:headed": "playwright test --headed"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
+    "@types/node": "^25.0.6",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-pwa": "^1.2.0",
     "whisper-node": "^1.1.0"
   }
 }
