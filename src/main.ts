@@ -2,7 +2,7 @@
 
 import './debug';
 import { state, getPendingVoiceMessage, clearPendingVoiceMessage } from './state';
-import { dbg } from './debug';
+import { dbg, BUILD_ID } from './debug';
 import {
   showLoginScreen,
   showVoiceScreen,
@@ -23,9 +23,12 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Log version
-console.log('Spraff - Vite + TypeScript build');
-dbg('app loaded - Vite build');
+// Log version at startup
+console.log(`Spraff build ${BUILD_ID}`);
+
+// Set build ID in About modal
+const buildIdEl = document.getElementById('buildId');
+if (buildIdEl) buildIdEl.textContent = BUILD_ID;
 
 // ============ Orientation Lock ============
 function lockOrientation(): void {
