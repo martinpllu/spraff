@@ -12,9 +12,6 @@ export const elements = {
   stopBtn: document.getElementById('stopBtn') as HTMLButtonElement,
   cancelBtn: document.getElementById('cancelBtn') as HTMLButtonElement,
   installBtn: document.getElementById('installBtn') as HTMLButtonElement,
-  exitContinuousBtn: document.getElementById(
-    'exitContinuousBtn'
-  ) as HTMLButtonElement,
   clearChatBtn: document.getElementById('clearChatBtn') as HTMLButtonElement,
   textSendBtn: document.getElementById('textSendBtn') as HTMLButtonElement,
 
@@ -76,6 +73,26 @@ export const elements = {
     'installModalClose'
   ) as HTMLButtonElement,
 
+  // VAD download modal
+  vadDownloadModal: document.getElementById('vadDownloadModal') as HTMLElement,
+  vadDownloadModalClose: document.getElementById(
+    'vadDownloadModalClose'
+  ) as HTMLButtonElement,
+  vadDownloadSize: document.getElementById('vadDownloadSize') as HTMLElement,
+  vadDownloadProgress: document.getElementById(
+    'vadDownloadProgress'
+  ) as HTMLElement,
+  vadDownloadStatus: document.getElementById('vadDownloadStatus') as HTMLElement,
+  vadDownloadActions: document.getElementById(
+    'vadDownloadActions'
+  ) as HTMLElement,
+  vadDownloadCancel: document.getElementById(
+    'vadDownloadCancel'
+  ) as HTMLButtonElement,
+  vadDownloadConfirm: document.getElementById(
+    'vadDownloadConfirm'
+  ) as HTMLButtonElement,
+
   // Text mode
   textInputContainer: document.getElementById(
     'textInputContainer'
@@ -87,4 +104,7 @@ export const elements = {
   conversationHistoryEl: document.getElementById(
     'conversationHistory'
   ) as HTMLElement,
+
+  // Continuous mode toggle
+  continuousToggle: document.getElementById('continuousToggle') as HTMLElement,
 };

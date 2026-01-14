@@ -9,7 +9,7 @@ import { stopSpeaking, openVoiceSettings, closeVoiceSettings, populateVoiceList,
 import { enterContinuousMode, exitContinuousMode } from './vad';
 import { startOAuthFlow, logout } from './oauth';
 import { sendTextToAPI } from './api';
-import { OPENROUTER_API_URL, HOLD_THRESHOLD } from './config';
+import { OPENROUTER_API_URL } from './config';
 import { formatFileSize } from './ui';
 
 // PWA Install prompt
@@ -29,16 +29,9 @@ export function setupEventListeners(): void {
     logout();
   });
 
-  // Main button - tap to toggle recording, hold to enter continuous mode
-  let buttonPressStart = 0;
-  let holdTimer: ReturnType<typeof setTimeout> | null = null;
-  let enteredContinuousModeThisPress = false;
-
-  function handlePressStart(): void {
-    buttonPressStart = Date.now();
-    enteredContinuousModeThisPress = false;
-
-    // If in continuous mode, taps exit it
+  // Main button - tap to toggle recording (continuous mode is controlled by toggle)
+  function handleButtonTap(): void {
+    // In continuous mode, button is disabled (VAD handles listening)
     if (state.continuousModeActive) {
       return;
     }
@@ -50,165 +43,38 @@ export function setupEventListeners(): void {
       return;
     }
 
-    // Start a timer - if held long enough, enter continuous mode
-    holdTimer = setTimeout(() => {
-      holdTimer = null;
-      enteredContinuousModeThisPress = true;
-      enterContinuousMode();
-    }, HOLD_THRESHOLD);
-  }
-
-  function handlePressEnd(): void {
-    const pressDuration = Date.now() - buttonPressStart;
-    buttonPressStart = 0;
-
-    // Clear hold timer if still pending
-    if (holdTimer) {
-      clearTimeout(holdTimer);
-      holdTimer = null;
+    // Toggle recording
+    if (state.isListening) {
+      stopRecording();
+    } else {
+      startRecording();
     }
-
-    // If we just entered continuous mode on this press, don't do anything else
-    if (enteredContinuousModeThisPress) {
-      enteredContinuousModeThisPress = false;
-      return;
-    }
-
-    // In continuous mode, tap exits it
-    if (state.continuousModeActive) {
-      exitContinuousMode();
-      return;
-    }
-
-    // Short tap: toggle recording
-    if (pressDuration < HOLD_THRESHOLD) {
-      if (state.isListening) {
-        stopRecording();
-      } else {
-        startRecording();
-      }
-    }
-    // Long press already triggered continuous mode via timer
   }
 
   // Mouse events for desktop
-  elements.mainButton.addEventListener('mousedown', handlePressStart);
-  elements.mainButton.addEventListener('mouseup', handlePressEnd);
+  elements.mainButton.addEventListener('click', handleButtonTap);
 
-  elements.mainButton.addEventListener('mouseleave', () => {
-    // If user drags away while holding, cancel the hold timer
-    if (holdTimer) {
-      clearTimeout(holdTimer);
-      holdTimer = null;
-    }
-  });
-
-  // Touch events for mobile - distinguish swipes from taps
-  let buttonTouchStartX = 0;
-  let buttonTouchStartY = 0;
-  let buttonTouchMoved = false;
-  let buttonTouchStartTime = 0;
-  let touchHoldTimer: ReturnType<typeof setTimeout> | null = null;
-  let touchEnteredContinuousMode = false;
-
-  elements.mainButton.addEventListener('touchstart', (e) => {
-    e.preventDefault(); // Prevent mouse events from also firing
-    buttonTouchStartX = e.touches[0].clientX;
-    buttonTouchStartY = e.touches[0].clientY;
-    buttonTouchStartTime = Date.now();
-    buttonTouchMoved = false;
-    touchEnteredContinuousMode = false;
-
-    // If in continuous mode, taps will exit it (handled in touchend)
-    if (state.continuousModeActive) {
-      return;
-    }
-
-    // If speaking, tap interrupts and starts recording
-    if (state.isSpeaking || state.speechQueue.length > 0) {
-      stopSpeaking();
-      startRecording();
-      return;
-    }
-
-    // Set timer to enter continuous mode after hold threshold
-    touchHoldTimer = setTimeout(() => {
-      if (!buttonTouchMoved) {
-        touchHoldTimer = null;
-        touchEnteredContinuousMode = true;
-        enterContinuousMode();
-      }
-    }, HOLD_THRESHOLD);
-  });
-
-  elements.mainButton.addEventListener('touchmove', (e) => {
-    const deltaX = Math.abs(e.touches[0].clientX - buttonTouchStartX);
-    const deltaY = Math.abs(e.touches[0].clientY - buttonTouchStartY);
-    // If moved more than 20px, it's a swipe not a tap
-    if (deltaX > 20 || deltaY > 20) {
-      buttonTouchMoved = true;
-      // Cancel the hold timer if it's a swipe
-      if (touchHoldTimer) {
-        clearTimeout(touchHoldTimer);
-        touchHoldTimer = null;
-      }
-    }
-  });
-
+  // Touch events for mobile - prevent double-firing
   elements.mainButton.addEventListener('touchend', (e) => {
     e.preventDefault();
-    const pressDuration = Date.now() - buttonTouchStartTime;
+    handleButtonTap();
+  });
 
-    // Clear the hold timer
-    if (touchHoldTimer) {
-      clearTimeout(touchHoldTimer);
-      touchHoldTimer = null;
-    }
-
-    if (buttonTouchMoved) {
-      // It was a swipe - don't do anything
-      buttonTouchMoved = false;
-      return;
-    }
-
-    // If we just entered continuous mode on this touch, don't do anything else
-    if (touchEnteredContinuousMode) {
-      touchEnteredContinuousMode = false;
-      return;
-    }
-
-    // In continuous mode, tap exits it
+  // Continuous mode toggle
+  elements.continuousToggle.addEventListener('click', async () => {
     if (state.continuousModeActive) {
       exitContinuousMode();
-      return;
-    }
-
-    // Short tap: toggle recording
-    if (pressDuration < HOLD_THRESHOLD) {
-      if (state.isListening) {
-        stopRecording();
-      } else {
-        startRecording();
+      elements.continuousToggle.classList.remove('active', 'listening');
+    } else {
+      await enterContinuousMode();
+      // Only update UI if continuous mode was actually entered
+      if (state.continuousModeActive) {
+        elements.continuousToggle.classList.add('active');
       }
     }
-    // Long press already triggered continuous mode via timer
   });
 
-  // Handle touch cancel (e.g., when iOS interrupts the touch)
-  elements.mainButton.addEventListener('touchcancel', () => {
-    if (touchHoldTimer) {
-      clearTimeout(touchHoldTimer);
-      touchHoldTimer = null;
-    }
-    buttonTouchMoved = false;
-    touchEnteredContinuousMode = false;
-  });
-
-  // Spacebar - tap to toggle recording, hold to enter continuous mode
-  let spacebarPressStart = 0;
-  let spacebarHoldTimer: ReturnType<typeof setTimeout> | null = null;
-  let spacebarEnteredContinuousMode = false;
-
+  // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     if (!elements.voiceModal.classList.contains('hidden')) return;
     if (
@@ -223,15 +89,15 @@ export function setupEventListeners(): void {
     if (e.code === 'Escape' && state.continuousModeActive) {
       e.preventDefault();
       exitContinuousMode();
+      elements.continuousToggle.classList.remove('active', 'listening');
       return;
     }
 
+    // Spacebar toggles recording (not continuous mode)
     if (e.code === 'Space') {
       e.preventDefault();
-      spacebarPressStart = Date.now();
-      spacebarEnteredContinuousMode = false;
 
-      // If in continuous mode, spacebar tap will exit it (handled in keyup)
+      // In continuous mode, spacebar does nothing
       if (state.continuousModeActive) {
         return;
       }
@@ -240,47 +106,12 @@ export function setupEventListeners(): void {
         stopSpeaking();
       }
 
-      // Start a timer - if held long enough, enter continuous mode
-      spacebarHoldTimer = setTimeout(() => {
-        spacebarHoldTimer = null;
-        spacebarEnteredContinuousMode = true;
-        enterContinuousMode();
-      }, HOLD_THRESHOLD);
-    }
-  });
-
-  document.addEventListener('keyup', (e) => {
-    if (e.code === 'Space' && spacebarPressStart > 0) {
-      const pressDuration = Date.now() - spacebarPressStart;
-      spacebarPressStart = 0;
-
-      // Clear hold timer if still pending
-      if (spacebarHoldTimer) {
-        clearTimeout(spacebarHoldTimer);
-        spacebarHoldTimer = null;
+      // Toggle recording
+      if (state.isListening) {
+        stopRecording();
+      } else {
+        startRecording();
       }
-
-      // If we just entered continuous mode on this press, don't do anything else
-      if (spacebarEnteredContinuousMode) {
-        spacebarEnteredContinuousMode = false;
-        return;
-      }
-
-      // In continuous mode, tap exits it
-      if (state.continuousModeActive) {
-        exitContinuousMode();
-        return;
-      }
-
-      // Short tap: toggle recording
-      if (pressDuration < HOLD_THRESHOLD) {
-        if (state.isListening) {
-          stopRecording();
-        } else {
-          startRecording();
-        }
-      }
-      // Long press already triggered continuous mode via timer
     }
   });
 
@@ -386,9 +217,6 @@ export function setupEventListeners(): void {
 
   // Cancel button
   elements.cancelBtn.addEventListener('click', cancelRecording);
-
-  // Exit continuous mode button
-  elements.exitContinuousBtn.addEventListener('click', exitContinuousMode);
 
   // Voice modal
   elements.modalClose.addEventListener('click', closeVoiceSettings);

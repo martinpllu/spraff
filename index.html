@@ -16,14 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/src/style.css">
-  <!-- VAD Library for continuous chat mode -->
-  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort.js"></script>
-  <script>
-    // Configure ONNX Runtime WASM paths before VAD loads
-    // This prevents "Failed to resolve module specifier" errors from CDN loading
-    ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/';
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.19/dist/bundle.min.js"></script>
+  <!-- VAD Library loaded on-demand when continuous mode is enabled -->
 </head>
 <body>
   <!-- Landscape Warning -->
@@ -60,6 +53,35 @@
             <span class="cost-stat-label">Last voice message</span>
             <span class="cost-stat-value" id="costVoiceSize">—</span>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VAD Download Modal -->
+  <div class="modal-overlay hidden" id="vadDownloadModal">
+    <div class="modal modal-small">
+      <div class="modal-header">
+        <h3>Enable Continuous Mode</h3>
+        <button class="modal-close" id="vadDownloadModalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 1rem;">Continuous mode requires a voice detection model to be downloaded.</p>
+        <div class="cost-stats" style="margin-bottom: 1rem;">
+          <div class="cost-stat">
+            <span class="cost-stat-label">Download size</span>
+            <span class="cost-stat-value" id="vadDownloadSize">~14 MB</span>
+          </div>
+        </div>
+        <p style="color: var(--fg-muted); margin-bottom: 1.5rem;">This is a one-time download that will be cached for future use.</p>
+        <div id="vadDownloadProgress" class="hidden" style="margin-bottom: 1rem;">
+          <div class="cost-stat">
+            <span class="cost-stat-label" id="vadDownloadStatus">Downloading...</span>
+          </div>
+        </div>
+        <div class="modal-actions" id="vadDownloadActions">
+          <button class="modal-btn modal-btn-secondary" id="vadDownloadCancel">Cancel</button>
+          <button class="modal-btn modal-btn-primary" id="vadDownloadConfirm">Download</button>
         </div>
       </div>
     </div>
@@ -326,7 +348,16 @@
 
     <!-- Hint -->
     <div class="hint-text" id="hintText">
-      Push button or <kbd>Space</kbd> to speak
+      Tap or <kbd>Space</kbd> to speak
+    </div>
+
+    <!-- Continuous Mode Toggle -->
+    <div class="continuous-toggle" id="continuousToggle">
+      <span class="continuous-label">Continuous</span>
+      <div class="continuous-switch" id="continuousSwitch">
+        <div class="continuous-switch-track"></div>
+        <div class="continuous-switch-thumb"></div>
+      </div>
     </div>
 
     <!-- Bleed detection status -->
@@ -362,13 +393,6 @@
             <line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
           <span>Cancel</span>
-        </button>
-        <button class="action-btn hidden" id="exitContinuousBtn">
-          <svg viewBox="0 0 24 24">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-          <span>Exit</span>
         </button>
         <button class="action-btn hidden" id="clearChatBtn">
           <span class="clear-chat-text">Clear</span>

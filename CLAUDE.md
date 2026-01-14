@@ -12,6 +12,32 @@ pnpm build    # Build for production
 pnpm preview  # Preview production build locally
 ```
 
+### Mobile Testing via Cloudflare Tunnel
+
+The app is served via Cloudflare tunnel at `https://spraff.pllu.ai` for mobile testing.
+
+```bash
+# 1. Start dev server (runs on port 3001 with HTTPS)
+pnpm dev
+
+# 2. Start Cloudflare tunnel (in another terminal)
+cloudflared tunnel --url https://localhost:3001 --no-tls-verify run spraff
+
+# 3. Access from mobile at https://spraff.pllu.ai
+```
+
+**Cache issues:** If you see stale content on mobile:
+- The vite config has aggressive no-cache headers to prevent Cloudflare edge caching
+- On mobile, open in a private/incognito tab to bypass browser cache
+- PWA/Service Worker is disabled in dev mode to prevent caching issues
+
+**Alternative - Direct IP (no OAuth):** For quick UI testing without login:
+```bash
+# Access at https://<YOUR_IP>:3001 (accept certificate warning)
+ifconfig | grep "inet " | grep -v 127.0.0.1
+```
+Note: OAuth won't work with IP addresses - only the tunnel URL is registered with OpenRouter.
+
 ### Project Structure
 
 ```

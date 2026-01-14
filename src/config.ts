@@ -9,7 +9,6 @@ export const CALLBACK_URL = window.location.origin + window.location.pathname;
 // Timing constants
 export const SPEECH_END_BUFFER_MS = 600;
 export const BLEED_DETECTION_WINDOW_MS = 1500;
-export const HOLD_THRESHOLD = 500; // ms - hold this long to enter continuous mode
 
 // Adaptive pause detection based on industry research
 export const VERY_SHORT_UTTERANCE_MS = 600;

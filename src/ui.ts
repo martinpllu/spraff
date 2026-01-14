@@ -20,7 +20,7 @@ export function showVoiceScreen(): void {
 
 // ============ Button State ============
 export function setButtonState(buttonState: ButtonState): void {
-  const { mainButton, statusText, hintText, cancelBtn } = elements;
+  const { mainButton, statusText, hintText, cancelBtn, continuousToggle } = elements;
 
   mainButton.classList.remove(
     'listening',
@@ -35,7 +35,7 @@ export function setButtonState(buttonState: ButtonState): void {
       mainButton.classList.add('listening');
       statusText.classList.add('listening');
       statusText.textContent = 'Listening';
-      hintText.textContent = 'Push button or Space to send';
+      hintText.textContent = 'Tap or Space to send';
       hintText.classList.remove('hidden');
       cancelBtn.classList.remove('hidden');
       break;
@@ -54,10 +54,11 @@ export function setButtonState(buttonState: ButtonState): void {
       break;
     case 'continuous-ready':
       statusText.classList.add('continuous');
-      statusText.textContent = 'Continuous Mode';
-      hintText.textContent = 'Speak anytime. Double-click to exit';
+      statusText.textContent = 'Listening';
+      hintText.textContent = 'Speak anytime';
       hintText.classList.remove('hidden');
       cancelBtn.classList.add('hidden');
+      continuousToggle.classList.remove('listening');
       break;
     case 'continuous-listening':
       mainButton.classList.add('continuous-listening');
@@ -65,10 +66,11 @@ export function setButtonState(buttonState: ButtonState): void {
       statusText.textContent = 'Listening...';
       hintText.classList.add('hidden');
       cancelBtn.classList.add('hidden');
+      continuousToggle.classList.add('listening');
       break;
     default:
       statusText.textContent = 'Ready';
-      hintText.textContent = 'Push button or Space to speak';
+      hintText.textContent = 'Tap or Space to speak';
       hintText.classList.remove('hidden');
       cancelBtn.classList.add('hidden');
   }
@@ -274,27 +276,28 @@ export function updateBleedStatus(statusState: string | null = null): void {
   const statusDiv = document.getElementById('bleedStatus');
   if (!statusDiv) return;
 
-  // Debug states
+  // Log all state changes to debug console
   if (statusState === 'no-mic') {
-    statusDiv.textContent = 'Bleed: waiting for mic';
-    statusDiv.style.color = '';
+    window.dbg?.('Bleed detection: waiting for mic permission');
+    statusDiv.textContent = '';
   } else if (statusState === 'init-vad') {
-    statusDiv.textContent = 'Bleed: init VAD...';
-    statusDiv.style.color = '';
+    window.dbg?.('Bleed detection: initializing VAD...');
+    statusDiv.textContent = '';
   } else if (statusState === 'vad-failed') {
-    statusDiv.textContent = 'Bleed: VAD failed';
-    statusDiv.style.color = 'var(--error)';
+    window.dbg?.('Bleed detection: VAD initialization failed');
+    statusDiv.textContent = '';
   } else if (statusState === 'detecting') {
-    statusDiv.textContent = 'Detecting audio...';
-    statusDiv.style.color = '';
+    window.dbg?.('Bleed detection: analyzing audio...');
+    statusDiv.textContent = '';
   } else if (state.micBleedDetected === true) {
-    statusDiv.textContent = 'Bleed: yes (tap to interrupt)';
+    window.dbg?.('Bleed detection: speaker bleed detected - voice interrupts disabled');
+    statusDiv.textContent = '🎧 Headphones recommended';
     statusDiv.style.color = '';
   } else if (state.micBleedDetected === false) {
-    statusDiv.textContent = 'Bleed: no (voice interrupts)';
-    statusDiv.style.color = '';
+    window.dbg?.('Bleed detection: no bleed - voice interrupts enabled');
+    statusDiv.textContent = '';
   } else {
-    statusDiv.textContent = ''; // Hide when empty
+    statusDiv.textContent = '';
   }
 }
 

@@ -15,16 +15,16 @@ import {
   MEDIUM_WAIT_MS,
   LONG_WAIT_MS,
 } from './config';
+import { isVADLoaded, isVADAvailable, loadVADLibrary, VAD_DOWNLOAD_SIZE_MB } from './vad-loader';
 import type { VADInstance, VADOptions } from './types';
 
 // ============ VAD Initialization ============
 export async function initializeVAD(): Promise<VADInstance | null> {
   if (state.vadInstance) return state.vadInstance;
 
-  // Check if VAD library is loaded
-  if (typeof vad === 'undefined') {
-    console.error('VAD library not loaded');
-    showError('Voice detection unavailable');
+  // Check if VAD library scripts are loaded (they're loaded on-demand)
+  if (!isVADAvailable()) {
+    console.log('VAD library not yet loaded');
     return null;
   }
 
@@ -341,8 +341,55 @@ export function resumeVADAfterDelay(delayMs: number = SPEECH_END_BUFFER_MS): voi
   }, delayMs);
 }
 
+// ============ VAD Download Dialog ============
+function showVADDownloadDialog(): Promise<boolean> {
+  return new Promise((resolve) => {
+    // Update size display
+    elements.vadDownloadSize.textContent = `~${VAD_DOWNLOAD_SIZE_MB} MB`;
+
+    // Reset dialog state
+    elements.vadDownloadProgress.classList.add('hidden');
+    elements.vadDownloadActions.classList.remove('hidden');
+    elements.vadDownloadConfirm.disabled = false;
+
+    // Show modal
+    elements.vadDownloadModal.classList.remove('hidden');
+
+    // Handle confirm
+    const handleConfirm = (): void => {
+      cleanup();
+      resolve(true);
+    };
+
+    // Handle cancel
+    const handleCancel = (): void => {
+      cleanup();
+      elements.vadDownloadModal.classList.add('hidden');
+      resolve(false);
+    };
+
+    // Cleanup listeners
+    const cleanup = (): void => {
+      elements.vadDownloadConfirm.removeEventListener('click', handleConfirm);
+      elements.vadDownloadCancel.removeEventListener('click', handleCancel);
+      elements.vadDownloadModalClose.removeEventListener('click', handleCancel);
+    };
+
+    elements.vadDownloadConfirm.addEventListener('click', handleConfirm);
+    elements.vadDownloadCancel.addEventListener('click', handleCancel);
+    elements.vadDownloadModalClose.addEventListener('click', handleCancel);
+  });
+}
+
+function updateDownloadProgress(stage: string): void {
+  elements.vadDownloadStatus.textContent = stage;
+}
+
 // ============ Continuous Mode Control ============
 export async function enterContinuousMode(): Promise<void> {
+  // Update toggle UI immediately for responsive feel
+  elements.continuousToggle.classList.add('active');
+
   // Cancel any current recording
   if (state.isListening) {
     cancelRecording();
@@ -353,9 +400,51 @@ export async function enterContinuousMode(): Promise<void> {
     stopSpeaking();
   }
 
+  // Check if VAD library needs to be loaded
+  if (!isVADAvailable()) {
+    // First time ever - show confirmation dialog
+    if (!isVADLoaded()) {
+      const confirmed = await showVADDownloadDialog();
+      if (!confirmed) {
+        // Revert toggle if user cancels
+        elements.continuousToggle.classList.remove('active');
+        return;
+      }
+
+      // User confirmed - start download with progress UI
+      try {
+        elements.vadDownloadActions.classList.add('hidden');
+        elements.vadDownloadProgress.classList.remove('hidden');
+        elements.vadDownloadConfirm.disabled = true;
+
+        await loadVADLibrary(updateDownloadProgress);
+
+        // Hide modal on success
+        elements.vadDownloadModal.classList.add('hidden');
+      } catch (error) {
+        console.error('Failed to load VAD library:', error);
+        elements.vadDownloadModal.classList.add('hidden');
+        elements.continuousToggle.classList.remove('active');
+        showError('Failed to download voice detection model');
+        return;
+      }
+    } else {
+      // Previously downloaded - load silently from cache
+      try {
+        await loadVADLibrary();
+      } catch (error) {
+        console.error('Failed to load VAD library:', error);
+        elements.continuousToggle.classList.remove('active');
+        showError('Failed to load voice detection');
+        return;
+      }
+    }
+  }
+
   // Initialize VAD if needed
   const vadReady = await initializeVAD();
   if (!vadReady) {
+    elements.continuousToggle.classList.remove('active');
     showError('Could not start continuous mode');
     return;
   }
@@ -365,9 +454,8 @@ export async function enterContinuousMode(): Promise<void> {
   setButtonState('continuous-ready');
   state.vadInstance!.start();
 
-  // Update UI
+  // Update main button UI
   elements.mainButton.classList.add('continuous-mode');
-  elements.exitContinuousBtn.classList.remove('hidden');
 }
 
 export function exitContinuousMode(): void {
@@ -392,6 +480,6 @@ export function exitContinuousMode(): void {
 
   // Update UI
   elements.mainButton.classList.remove('continuous-mode');
-  elements.exitContinuousBtn.classList.add('hidden');
+  elements.continuousToggle.classList.remove('active', 'listening');
   setButtonState('ready');
 }

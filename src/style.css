@@ -25,6 +25,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Global utility class */
+.hidden {
+  display: none !important;
+}
+
 /* Remove focus outlines globally, use custom focus styles instead */
 *:focus {
   outline: none;
@@ -491,6 +496,8 @@ body {
   color: var(--fg-muted);
   white-space: nowrap;
   transition: all 0.3s ease;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .status-text.listening {
@@ -536,10 +543,125 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+/* Continuous Mode Toggle */
+.continuous-toggle {
+  position: fixed;
+  bottom: calc(50% + 130px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem 0.5rem 1rem;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.continuous-toggle:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
+
+.continuous-toggle:focus,
+.continuous-toggle:focus-visible {
+  outline: none;
+  border-color: var(--border);
+}
+
+/* Prevent sticky hover/focus states on touch devices */
+@media (hover: none) {
+  .continuous-toggle:focus,
+  .continuous-toggle:hover {
+    border-color: var(--border);
+  }
+}
+
+.continuous-toggle.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15), var(--shadow-md);
+}
+
+.continuous-label {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  transition: color 0.25s ease;
+}
+
+.continuous-toggle.active .continuous-label {
+  color: white;
+}
+
+.continuous-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+}
+
+.continuous-switch-track {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-warm);
+  border-radius: 100px;
+  transition: background 0.25s ease;
+}
+
+.continuous-toggle.active .continuous-switch-track {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.continuous-switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.continuous-toggle.active .continuous-switch-thumb {
+  transform: translateX(18px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Pulse animation when active and listening */
+.continuous-toggle.active.listening {
+  animation: continuous-pulse 2s ease-in-out infinite;
+}
+
+@keyframes continuous-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15), var(--shadow-md);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(79, 70, 229, 0.1), var(--shadow-md);
+  }
+}
+
+/* Hide in text mode */
+.voice-screen.text-mode .continuous-toggle {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) scale(0.9);
+}
+
 /* Bleed detection status */
 .bleed-status {
   position: fixed;
-  bottom: 75px;
+  bottom: 95px;
   left: 50%;
   transform: translateX(-50%);
   font-family: 'Outfit', sans-serif;
@@ -879,6 +1001,46 @@ body {
 .modal-body {
   padding: 1.25rem;
   overflow-y: auto;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.modal-btn-primary {
+  background: var(--accent);
+  color: white;
+}
+
+.modal-btn-primary:hover {
+  background: var(--accent-dark);
+}
+
+.modal-btn-primary:disabled {
+  background: var(--fg-muted);
+  cursor: not-allowed;
+}
+
+.modal-btn-secondary {
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+
+.modal-btn-secondary:hover {
+  background: var(--bg-warm);
 }
 
 .voice-list {

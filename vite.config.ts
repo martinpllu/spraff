@@ -11,6 +11,9 @@ const httpsConfig =
       }
     : undefined;
 
+// Disable PWA in development to avoid service worker caching issues
+const isDev = process.env.NODE_ENV !== 'production';
+
 export default defineConfig({
   root: '.',
   publicDir: 'public',
@@ -24,18 +27,54 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3001, // Match Cloudflare tunnel config
-    host: true, // Expose to network for Cloudflare tunnel
-    allowedHosts: true, // Allow any host (for Cloudflare tunnel)
+    port: 3001,
+    host: true, // Expose to network for mobile testing
+    allowedHosts: true,
+    https: httpsConfig, // Enable HTTPS if certificates exist
     headers: {
-      'Cache-Control': 'no-store', // Disable caching for development
+      // Aggressively disable caching for development (including Cloudflare edge)
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+      'Surrogate-Control': 'no-store',
+      'CDN-Cache-Control': 'no-store',
+      'Cloudflare-CDN-Cache-Control': 'no-store',
     },
   },
   plugins: [
-    VitePWA({
+    !isDev && VitePWA({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Cache VAD library and ONNX runtime from CDN for offline use
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/onnxruntime-web/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'onnx-runtime-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/@ricky0123\/vad-web/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'vad-library-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+        ],
       },
       manifest: {
         name: 'Spraff',
@@ -59,5 +98,5 @@ export default defineConfig({
         ],
       },
     }),
-  ],
+  ].filter(Boolean),
 });
