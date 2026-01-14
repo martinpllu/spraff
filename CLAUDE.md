@@ -69,11 +69,6 @@ For development, Vite's HMR ensures changes are reflected immediately.
 
 ## Debug Console
 
-The app includes a built-in debug console accessible via Menu > Debug. Use `window.dbg('message')` to log messages that will appear in this console on mobile.
+Access via Menu > Debug. Use `dbg(msg)` or `dbg(msg, 'warn'|'error')` - logs to both debug view and browser console.
 
-Key debug points are already instrumented:
-- `MIC GRANTED via startRecording` / `MIC GRANTED via VAD init`
-- `BLEED CHECK: micPermissionGranted=...`
-- `BLEED DETECTING...`
-- `BLEED RESULT: NO BLEED - interruption ON` / `BLEED RESULT: YES BLEED - interruption OFF`
-- `VAD running for interruption during TTS`
+API requests/responses are logged as `REQ #N` / `RES #N` with type (normal, waiting, tool_call, aborted, error).

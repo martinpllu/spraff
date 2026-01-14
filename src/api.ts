@@ -15,6 +15,37 @@ import { queueSpeech, stopSpeaking } from './speech';
 import { resumeVADAfterDelay } from './vad';
 import type { ToolCall, OpenRouterUsage } from './types';
 
+// ============ Request Logging ============
+let requestCounter = 0;
+
+function truncateText(text: string, maxLength: number = 200): string {
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength) + '... [truncated]';
+}
+
+function logRequest(
+  reqNum: number,
+  mode: 'voice' | 'text' | 'search',
+  historyLength: number,
+  userContent: string
+): void {
+  dbg(`--- REQ #${reqNum} (${mode}) ---`);
+  dbg(`History: ${historyLength} messages`);
+  dbg(`User: ${truncateText(userContent)}`);
+}
+
+function logResponse(
+  reqNum: number,
+  responseType: 'normal' | 'waiting' | 'tool_call' | 'error' | 'aborted',
+  content: string
+): void {
+  // Don't truncate special response types
+  const shouldTruncate = responseType === 'normal';
+  const displayContent = shouldTruncate ? truncateText(content) : content;
+  dbg(`--- RES #${reqNum} (${responseType}) ---`);
+  dbg(`Assistant: ${displayContent}`);
+}
+
 // ============ Tool Calling ============
 function parseToolCall(response: string): ToolCall | null {
   // Look for ```tool_call\n{...}\n``` pattern
@@ -27,7 +58,7 @@ function parseToolCall(response: string): ToolCall | null {
       return toolCall;
     }
   } catch (e) {
-    console.warn('Failed to parse tool call:', e);
+    dbg('Failed to parse tool call: ' + e, 'warn');
   }
   return null;
 }
@@ -253,17 +284,18 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
   state.currentRequestController = new AbortController();
   const signal = state.currentRequestController.signal;
 
+  // Assign request number for logging
+  const reqNum = ++requestCounter;
+
   // Calculate and store voice message size (base64 to bytes: ~75% of base64 length)
   const audioSizeBytes = Math.round(base64Audio.length * 0.75);
   state.stats.lastVoiceSize = audioSizeBytes;
 
   // Build user message content - include pending transcript if continuing
   let userContent: Array<{ type: string; text?: string; input_audio?: { data: string; format: string } }>;
+  let userContentDescription: string;
   if (state.pendingUtteranceTranscript) {
-    console.log(
-      'Including pending transcript in request:',
-      state.pendingUtteranceTranscript
-    );
+    dbg('Including pending transcript: ' + state.pendingUtteranceTranscript);
     userContent = [
       {
         type: 'text',
@@ -274,6 +306,7 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
         input_audio: { data: base64Audio, format: 'wav' },
       },
     ];
+    userContentDescription = `[CONTINUATION] "${state.pendingUtteranceTranscript}" + [audio ${Math.round(audioSizeBytes / 1024)}KB]`;
   } else {
     userContent = [
       {
@@ -281,7 +314,11 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
         input_audio: { data: base64Audio, format: 'wav' },
       },
     ];
+    userContentDescription = `[audio ${Math.round(audioSizeBytes / 1024)}KB]`;
   }
+
+  // Log the request
+  logRequest(reqNum, 'voice', state.conversationHistory.length, userContentDescription);
 
   // Build request body
   const requestBody = JSON.stringify({
@@ -386,8 +423,8 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
 
     // Check for [WAITING] tag - LLM detected incomplete speech
     if (responseOnly.includes('[WAITING]') || fullResponse.includes('[WAITING]')) {
-      console.log('LLM detected incomplete speech, waiting for continuation');
-      dbg('WAITING: LLM detected incomplete speech');
+      dbg('LLM detected incomplete speech, waiting for continuation');
+      logResponse(reqNum, 'waiting', `[WAITING] transcript: "${userTranscript || ''}"`);
 
       // Store the transcript for later combination
       if (userTranscript) {
@@ -397,7 +434,7 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
         } else {
           state.pendingUtteranceTranscript = userTranscript;
         }
-        console.log('Pending transcript:', state.pendingUtteranceTranscript);
+        dbg('Pending transcript: ' + state.pendingUtteranceTranscript);
       }
 
       state.waitingForContinuation = true;
@@ -416,7 +453,7 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
 
     // If we were waiting for continuation, just clear the pending state
     if (state.pendingUtteranceTranscript) {
-      console.log('Clearing pending transcript (LLM already combined it)');
+      dbg('Clearing pending transcript (LLM already combined it)');
       state.pendingUtteranceTranscript = null;
       state.waitingForContinuation = false;
     }
@@ -427,8 +464,10 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
     const detectedToolCall = toolCall || toolCallFromFull;
 
     if (detectedToolCall && detectedToolCall.tool === 'web_search') {
+      logResponse(reqNum, 'tool_call', `web_search for: "${userTranscript || ''}"`);
+
       if (!userTranscript) {
-        console.warn('Web search requested but no transcript available');
+        dbg('Web search requested but no transcript available', 'warn');
         showError('Could not process voice search request');
         setButtonState('ready');
         elements.stopBtn.classList.add('hidden');
@@ -493,7 +532,7 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
         });
         saveConversationHistory();
       } catch (searchError) {
-        console.error('Web search error:', searchError);
+        dbg('Web search error: ' + (searchError instanceof Error ? searchError.message : String(searchError)), 'error');
         showError(
           'Web search failed: ' +
             (searchError instanceof Error ? searchError.message : String(searchError))
@@ -503,6 +542,8 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
       }
     } else {
       // Normal response - speak it
+      logResponse(reqNum, 'normal', `transcript: "${userTranscript || ''}" | response: ${responseOnly}`);
+
       setButtonState('speaking');
       elements.stopBtn.classList.remove('hidden');
 
@@ -528,12 +569,13 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
   } catch (error) {
     // Check if this was an intentional abort (user started speaking)
     if (error instanceof Error && error.name === 'AbortError') {
-      console.log('API request aborted - user started speaking');
-      dbg('Request aborted - user speaking');
+      dbg('API request aborted - user started speaking');
+      logResponse(reqNum, 'aborted', 'User started speaking');
       // Don't show error or change state - VAD will handle the new speech
       return;
     }
-    console.error('API error:', error);
+    dbg('API error: ' + (error instanceof Error ? error.message : String(error)), 'error');
+    logResponse(reqNum, 'error', error instanceof Error ? error.message : String(error));
     showError(error instanceof Error ? error.message : String(error));
     setButtonState('ready');
     elements.stopBtn.classList.add('hidden');
@@ -552,6 +594,10 @@ export async function sendTextToAPI(userText: string): Promise<void> {
     const wordCount = parseInt(wordMatch[1], 10);
     userText = `Write exactly ${wordCount} words on a random interesting topic. Pick something unexpected and engaging.`;
   }
+
+  // Assign request number for logging
+  const reqNum = ++requestCounter;
+  logRequest(reqNum, 'text', state.conversationHistory.length, userText);
 
   state.isProcessingText = true;
   elements.textSendBtn.classList.add('loading');
@@ -639,6 +685,8 @@ export async function sendTextToAPI(userText: string): Promise<void> {
     // Check for tool calls before finishing
     const toolCall = parseToolCall(fullResponse);
     if (toolCall && toolCall.tool === 'web_search') {
+      logResponse(reqNum, 'tool_call', `web_search for: "${userText}"`);
+
       try {
         // Execute web search with :online model
         const searchResult = await executeWebSearchText(
@@ -666,7 +714,8 @@ export async function sendTextToAPI(userText: string): Promise<void> {
         });
         saveConversationHistory();
       } catch (searchError) {
-        console.error('Web search error:', searchError);
+        dbg('Web search error: ' + (searchError instanceof Error ? searchError.message : String(searchError)), 'error');
+        logResponse(reqNum, 'error', 'Web search failed: ' + (searchError instanceof Error ? searchError.message : String(searchError)));
         showError(
           'Web search failed: ' +
             (searchError instanceof Error ? searchError.message : String(searchError))
@@ -674,6 +723,7 @@ export async function sendTextToAPI(userText: string): Promise<void> {
         finishStreamingMessage();
       }
     } else {
+      logResponse(reqNum, 'normal', fullResponse);
       finishStreamingMessage();
 
       // Update stats
@@ -690,7 +740,8 @@ export async function sendTextToAPI(userText: string): Promise<void> {
       saveConversationHistory();
     }
   } catch (error) {
-    console.error('API error:', error);
+    dbg('API error: ' + (error instanceof Error ? error.message : String(error)), 'error');
+    logResponse(reqNum, 'error', error instanceof Error ? error.message : String(error));
     showError(error instanceof Error ? error.message : String(error));
     finishStreamingMessage();
     // Remove the empty assistant message if we failed
