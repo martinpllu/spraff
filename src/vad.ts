@@ -2,7 +2,7 @@
 
 import { state } from './state';
 import { elements } from './dom';
-import { setButtonState, showError, updateBleedStatus } from './ui';
+import { setButtonState, showError, updateBleedStatus, updateVoiceSummary } from './ui';
 import { dbg } from './debug';
 import { cancelRecording, startRecording, blobToBase64, float32ToWav } from './audio';
 import { stopSpeaking } from './speech';
@@ -482,4 +482,5 @@ export function exitContinuousMode(): void {
   elements.mainButton.classList.remove('continuous-mode');
   elements.continuousToggle.classList.remove('active', 'listening');
   setButtonState('ready');
+  updateVoiceSummary();
 }
