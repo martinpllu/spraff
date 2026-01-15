@@ -96,7 +96,7 @@ The dev server requires HTTPS certificates (`cert.pem` and `key.pem`) for microp
 openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=localhost'
 ```
 
-For mobile testing, use a Cloudflare tunnel:
+For mobile testing, you can use a Cloudflare tunnel:
 
 ```bash
 cloudflared tunnel --url https://localhost:3001
