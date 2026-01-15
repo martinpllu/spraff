@@ -1,0 +1,154 @@
+import { Signal, useSignal } from '@preact/signals';
+import { useEffect } from 'preact/hooks';
+import { Header } from '../layout/Header';
+import { BottomBar } from '../layout/BottomBar';
+import { MessageList } from '../chat/MessageList';
+import { TextInput } from '../controls/TextInput';
+import { MainButton } from '../controls/MainButton';
+import { VoiceSettings } from '../modals/VoiceSettings';
+import { AboutModal } from '../modals/AboutModal';
+import { CostModal } from '../modals/CostModal';
+import { DebugConsole } from '../modals/DebugConsole';
+import { PrivacyModal } from '../modals/PrivacyModal';
+import { InstallModal } from '../modals/InstallModal';
+import { useAudio, blobToBase64, convertToWav } from '../../hooks/useAudio';
+import {
+  isTextMode,
+  buttonState,
+  clearMessages,
+  shouldStopSpeaking,
+  setLastVoiceSize,
+} from '../../state/signals';
+import { sendAudioToAPI } from '../../api';
+import { dbg } from '../../debug';
+
+interface Props {
+  showAbout: Signal<boolean>;
+  showCost: Signal<boolean>;
+  showDebug: Signal<boolean>;
+  showPrivacy: Signal<boolean>;
+  showInstall: Signal<boolean>;
+  showVoice: Signal<boolean>;
+}
+
+export function VoiceScreen({
+  showAbout,
+  showCost,
+  showDebug,
+  showPrivacy,
+  showInstall,
+  showVoice,
+}: Props) {
+  const showInstallButton = useSignal(false);
+  const { startRecording, stopRecording, cancelRecording } = useAudio();
+
+  // Check if we should show install button (iOS Safari, not in standalone mode)
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as { standalone?: boolean }).standalone === true;
+    showInstallButton.value = isIOS && !isStandalone;
+  }, []);
+
+  // Keyboard shortcut for voice mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only in voice mode, when ready
+      if (isTextMode.value || buttonState.value !== 'ready') return;
+
+      // Space to start recording
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault();
+        handlePress();
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        handleRelease();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  const handlePress = async () => {
+    if (buttonState.value !== 'ready') return;
+    shouldStopSpeaking.value = false;
+    try {
+      await startRecording();
+    } catch (error) {
+      dbg(`Failed to start recording: ${error}`, 'error');
+    }
+  };
+
+  const handleRelease = async () => {
+    if (buttonState.value !== 'listening') return;
+
+    const audioBlob = await stopRecording();
+    if (!audioBlob) return;
+
+    try {
+      const wavBlob = await convertToWav(audioBlob);
+      setLastVoiceSize(wavBlob.size);
+      const base64Audio = await blobToBase64(wavBlob);
+
+      await sendAudioToAPI(base64Audio);
+    } catch (error) {
+      dbg(`Failed to send audio: ${error}`, 'error');
+      buttonState.value = 'ready';
+    }
+  };
+
+  const handleCancel = () => {
+    cancelRecording();
+  };
+
+  const handleClearChat = () => {
+    clearMessages();
+  };
+
+  return (
+    <div class="voice-screen">
+      <Header
+        onVoiceSettings={() => (showVoice.value = true)}
+        onCost={() => (showCost.value = true)}
+        onDebug={() => (showDebug.value = true)}
+        onAbout={() => (showAbout.value = true)}
+        onPrivacy={() => (showPrivacy.value = true)}
+        onInstall={() => (showInstall.value = true)}
+        showInstall={showInstallButton.value}
+      />
+
+      <MessageList />
+
+      <TextInput />
+
+      <MainButton onPress={handlePress} onRelease={handleRelease} />
+
+      {!isTextMode.value && (
+        <div class="hint-text">
+          Tap or <kbd>Space</kbd> to speak
+        </div>
+      )}
+
+      <BottomBar onCancel={handleCancel} onClearChat={handleClearChat} />
+
+      {/* Modals */}
+      <VoiceSettings isOpen={showVoice} />
+      <AboutModal isOpen={showAbout} />
+      <CostModal isOpen={showCost} />
+      <DebugConsole isOpen={showDebug} />
+      <PrivacyModal isOpen={showPrivacy} />
+      <InstallModal isOpen={showInstall} />
+    </div>
+  );
+}

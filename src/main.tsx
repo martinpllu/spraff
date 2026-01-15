@@ -2,78 +2,42 @@
 
 import './style.css';
 
+import { render } from 'preact';
+import { App } from './components/App';
 import { dbg, initDebug } from './debug';
 import { BUILD_ID } from './build-id';
-import {
-  apiKey,
-  isListening,
-  isSpeaking,
-  isProcessingText,
-  getPendingVoiceMessage,
-  clearPendingVoiceMessage,
-  isMobile,
-} from './state';
-import {
-  showLoginScreen,
-  showVoiceScreen,
-  showError,
-  setButtonState,
-  updateModeUI,
-  updateVoiceSummary,
-} from './ui';
-import { statusText } from './dom';
-import { handleOAuthCallback } from './oauth';
-import { setupEventListeners } from './events';
+import { isMobile, apiKey, buttonState, isListening, isSpeaking, isProcessingText } from './state/signals';
+import { getPendingVoiceMessage, clearPendingVoiceMessage } from './state/signals';
 import { sendAudioToAPI } from './api';
 
 // ============ Initialization ============
 
 function init(): void {
   dbg(`Spraff starting (build: ${BUILD_ID})`);
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const code = urlParams.get('code');
-
-  if (code) {
-    handleOAuthCallback(code);
-    return;
-  }
-
-  if (apiKey) {
-    showVoiceScreen();
-  } else {
-    showLoginScreen();
-  }
-
-  updateModeUI();
-  setupEventListeners();
   lockOrientation();
   checkPendingVoiceMessage();
-  updateVoiceSummary();
 }
 
 // ============ Pending Voice Message Recovery ============
 
 async function checkPendingVoiceMessage(): Promise<void> {
-  if (!apiKey) return;
+  if (!apiKey.value) return;
   // Don't retry if we're already doing something
-  if (isListening || isSpeaking || isProcessingText) return;
+  if (isListening.value || isSpeaking.value || isProcessingText.value) return;
 
   const pendingAudio = getPendingVoiceMessage();
   if (pendingAudio) {
     const sizeKB = Math.round((pendingAudio.length * 0.75) / 1024);
     dbg(`Found pending voice message: ${sizeKB} KB`);
     // Auto-retry the upload
-    setButtonState('processing');
-    statusText.textContent = `Retrying ${sizeKB} KB`;
+    buttonState.value = 'processing';
 
     try {
       await sendAudioToAPI(pendingAudio);
       clearPendingVoiceMessage();
     } catch (e) {
       dbg(`Failed to retry pending voice message: ${e}`, 'error');
-      showError('Failed to send saved voice message');
-      setButtonState('ready');
+      buttonState.value = 'ready';
     }
   }
 }
@@ -107,17 +71,13 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   });
 }
 
-// ============ Build ID Display ============
-
-function displayBuildId(): void {
-  const buildIdEl = document.getElementById('buildId');
-  if (buildIdEl) {
-    buildIdEl.textContent = `Build: ${BUILD_ID}`;
-  }
-}
-
 // ============ Start ============
 
 initDebug();
 init();
-displayBuildId();
+
+// Mount Preact app
+const appRoot = document.getElementById('app');
+if (appRoot) {
+  render(<App />, appRoot);
+}

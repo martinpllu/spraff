@@ -5,30 +5,35 @@ import { dbg, dbgRequest, dbgResponse, getNextRequestId } from './debug';
 import type { ToolCall, StreamResult } from './types';
 import {
   apiKey,
-  conversationHistory,
-  stats,
+  messages,
+  addMessage,
   updateSessionCost,
-  addToConversationHistory,
-  saveConversationHistory,
-  setShouldStopSpeaking,
-  setSpeechQueue,
+  setLastVoiceSize,
+  buttonState,
+  shouldStopSpeaking,
+  speechQueue,
   selectedVoiceName,
-} from './state';
-import {
-  setButtonState,
-  showError,
-  showStopButton,
-  hideStopButton,
-  addMessageToHistory,
-  updateStreamingMessage,
-  finishStreamingMessage,
-} from './ui';
-import { statusText } from './dom';
+  streamingContent,
+} from './state/signals';
 import { queueSpeech } from './speech';
 
 function getModel(): string {
   return MODEL;
 }
+
+// ============ Error Toast ============
+
+function showError(message: string): void {
+  const toast = document.getElementById('errorToast');
+  if (toast) {
+    toast.textContent = message;
+    toast.classList.add('visible');
+    setTimeout(() => toast.classList.remove('visible'), 5000);
+  }
+  dbg(`Error: ${message}`, 'error');
+}
+
+// ============ System Prompts ============
 
 function buildSystemPrompt(): string {
   const today = new Date().toLocaleDateString('en-US', {
@@ -140,7 +145,6 @@ Be concise and direct in your responses. Focus on being helpful and informative.
 }
 
 function parseToolCall(response: string): ToolCall | null {
-  // Look for ```tool_call\n{...}\n``` pattern
   const match = response.match(/```tool_call\s*\n([\s\S]*?)\n```/);
   if (!match) return null;
 
@@ -162,7 +166,7 @@ async function executeWebSearchText(userText: string, systemPrompt: string): Pro
   const response = await fetch(`${OPENROUTER_API_URL}/chat/completions`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey.value}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': window.location.origin,
       'X-Title': 'Spraff',
@@ -177,7 +181,7 @@ async function executeWebSearchText(userText: string, systemPrompt: string): Pro
             systemPrompt +
             '\n\nWeb search is ENABLED for this query. You have access to current information from the web. Provide a helpful response using the search results.',
         },
-        ...conversationHistory,
+        ...messages.value,
         { role: 'user', content: userText },
       ],
       provider: {
@@ -225,7 +229,7 @@ async function executeWebSearchText(userText: string, systemPrompt: string): Pro
         const content = parsed.choices?.[0]?.delta?.content;
         if (content) {
           fullResponse += content;
-          updateStreamingMessage(fullResponse);
+          streamingContent.value = fullResponse;
         }
       } catch {
         // Ignore JSON parse errors
@@ -238,22 +242,20 @@ async function executeWebSearchText(userText: string, systemPrompt: string): Pro
 }
 
 export async function sendAudioToAPI(base64Audio: string): Promise<void> {
-  setShouldStopSpeaking(false);
-  setSpeechQueue([]);
+  shouldStopSpeaking.value = false;
+  speechQueue.value = [];
 
   const reqId = getNextRequestId();
 
-  // Calculate and store voice message size (base64 to bytes: ~75% of base64 length)
   const audioSizeBytes = Math.round(base64Audio.length * 0.75);
-  stats.lastVoiceSize = audioSizeBytes;
+  setLastVoiceSize(audioSizeBytes);
 
-  // Build request body
   const requestBody = JSON.stringify({
     model: getModel(),
     stream: true,
     messages: [
       { role: 'system', content: buildSystemPrompt() },
-      ...conversationHistory,
+      ...messages.value,
       {
         role: 'user',
         content: [{ type: 'input_audio', input_audio: { data: base64Audio, format: 'wav' } }],
@@ -271,14 +273,11 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
 
   dbgRequest(reqId, `Voice message ${payloadSizeKB} KB`);
 
-  // Show uploading status
-  statusText.textContent = `Uploading ${payloadSizeKB} KB`;
-
   try {
     const response = await fetch(`${OPENROUTER_API_URL}/chat/completions`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey.value}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': window.location.origin,
         'X-Title': 'Spraff',
@@ -292,9 +291,6 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
       throw new Error(error.error?.message || 'API request failed');
     }
 
-    statusText.textContent = 'Thinking';
-
-    // Stream the response
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let fullResponse = '';
@@ -329,7 +325,6 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
           if (content) {
             fullResponse += content;
 
-            // Extract user transcript
             if (!transcriptExtracted) {
               const match = fullResponse.match(/\[USER\]\s*([\s\S]*?)\s*\[\/USER\]/);
               if (match) {
@@ -344,43 +339,35 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
       }
     }
 
-    // Get the response text (after transcript)
     let responseOnly = fullResponse;
     const endTagIndex = fullResponse.indexOf('[/USER]');
     if (endTagIndex !== -1) {
       responseOnly = fullResponse.slice(endTagIndex + 7).trim();
     }
 
-    // Check for tool calls
     const toolCall = parseToolCall(responseOnly);
-    // Also check the full response in case the tool call came without transcript tags
     const toolCallFromFull = !toolCall ? parseToolCall(fullResponse) : null;
     const detectedToolCall = toolCall || toolCallFromFull;
 
     if (detectedToolCall && detectedToolCall.tool === 'web_search') {
-      // If we don't have a transcript, we can't proceed with search in voice mode
       if (!userTranscript) {
         dbgResponse(reqId, 'error', 'Web search requested but no transcript');
         showError('Could not process voice search request');
-        setButtonState('ready');
-        hideStopButton();
+        buttonState.value = 'ready';
         return;
       }
 
       dbgResponse(reqId, 'tool_call', 'web_search');
 
-      // Show searching status and speak it
-      statusText.textContent = 'Searching';
-      setButtonState('speaking');
+      buttonState.value = 'speaking';
 
-      // Speak the searching message and wait for it to finish
       await new Promise<void>((resolve) => {
         const utterance = new SpeechSynthesisUtterance('Searching the web, please wait.');
         utterance.rate = 1.1;
-        // Use the selected voice if available
-        if (selectedVoiceName) {
+        const voiceName = selectedVoiceName.value;
+        if (voiceName) {
           const voices = speechSynthesis.getVoices();
-          const voice = voices.find((v) => v.name === selectedVoiceName);
+          const voice = voices.find((v) => v.name === voiceName);
           if (voice) utterance.voice = voice;
         }
         utterance.onend = () => resolve();
@@ -389,10 +376,8 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
       });
 
       try {
-        // Execute web search with the transcript as text (not audio)
         const searchResult = await executeWebSearchText(userTranscript, buildVoiceSearchSystemPrompt());
 
-        // Update stats (include both requests)
         if (usage && typeof usage.cost === 'number') {
           updateSessionCost(usage.cost);
         }
@@ -400,9 +385,7 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
           updateSessionCost(searchResult.usage.cost);
         }
 
-        // Now speak the search response
-        setButtonState('speaking');
-        showStopButton();
+        buttonState.value = 'speaking';
 
         const sentences = searchResult.fullResponse.match(/[^.!?]+[.!?]+/g) || [
           searchResult.fullResponse,
@@ -411,51 +394,40 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
           queueSpeech(sentences[i]!.trim(), i === 0);
         }
 
-        // Save to conversation history
-        addToConversationHistory({ role: 'user', content: userTranscript });
-        addToConversationHistory({ role: 'assistant', content: searchResult.fullResponse });
-        saveConversationHistory();
+        addMessage({ role: 'user', content: userTranscript });
+        addMessage({ role: 'assistant', content: searchResult.fullResponse });
       } catch (searchError) {
         dbg(`Web search error: ${searchError}`, 'error');
         showError('Web search failed: ' + String(searchError));
-        setButtonState('ready');
-        hideStopButton();
+        buttonState.value = 'ready';
       }
     } else {
       dbgResponse(reqId, 'normal', `${responseOnly.length} chars`);
 
-      // Normal response - speak it
-      setButtonState('speaking');
-      showStopButton();
+      buttonState.value = 'speaking';
 
-      // Queue speech for the entire response, sentence by sentence
       const sentences = responseOnly.match(/[^.!?]+[.!?]+/g) || [responseOnly];
       for (let i = 0; i < sentences.length; i++) {
         queueSpeech(sentences[i]!.trim(), i === 0);
       }
 
-      // Update stats from API response
       if (usage && typeof usage.cost === 'number') {
         updateSessionCost(usage.cost);
       }
 
-      // Save to conversation history (keep speech hints for display)
-      addToConversationHistory({ role: 'user', content: userTranscript || '[voice message]' });
-      addToConversationHistory({ role: 'assistant', content: responseOnly });
-      saveConversationHistory();
+      addMessage({ role: 'user', content: userTranscript || '[voice message]' });
+      addMessage({ role: 'assistant', content: responseOnly });
     }
   } catch (error) {
     dbg(`API error: ${error}`, 'error');
     showError(String(error));
-    setButtonState('ready');
-    hideStopButton();
+    buttonState.value = 'ready';
   }
 }
 
 export async function sendTextToAPI(userText: string): Promise<void> {
   const reqId = getNextRequestId();
 
-  // Test feature: NNNw generates NNN words on a random topic
   const wordMatch = userText.trim().match(/^(\d+)w$/);
   if (wordMatch) {
     const wordCount = parseInt(wordMatch[1]!, 10);
@@ -464,17 +436,17 @@ export async function sendTextToAPI(userText: string): Promise<void> {
 
   dbgRequest(reqId, `Text: ${userText.substring(0, 50)}...`);
 
-  // Add user message to UI
-  addMessageToHistory('user', userText);
+  // Add user message to conversation
+  addMessage({ role: 'user', content: userText });
 
-  // Start streaming response
-  addMessageToHistory('assistant', '', true);
+  // Start streaming
+  streamingContent.value = '';
 
   try {
     const response = await fetch(`${OPENROUTER_API_URL}/chat/completions`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey.value}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': window.location.origin,
         'X-Title': 'Spraff',
@@ -484,8 +456,7 @@ export async function sendTextToAPI(userText: string): Promise<void> {
         stream: true,
         messages: [
           { role: 'system', content: buildTextSystemPrompt() },
-          ...conversationHistory,
-          { role: 'user', content: userText },
+          ...messages.value,
         ],
         provider: {
           only: ['google-vertex'],
@@ -532,12 +503,10 @@ export async function sendTextToAPI(userText: string): Promise<void> {
           const content = parsed.choices?.[0]?.delta?.content;
           if (content) {
             fullResponse += content;
-            // Check if this looks like a tool call starting - don't display it
             if (!fullResponse.includes('```tool_call')) {
-              updateStreamingMessage(fullResponse);
+              streamingContent.value = fullResponse;
             } else {
-              // Show searching message as soon as we detect tool call
-              updateStreamingMessage('*Searching the web...*');
+              streamingContent.value = '*Searching the web...*';
             }
           }
         } catch {
@@ -546,20 +515,15 @@ export async function sendTextToAPI(userText: string): Promise<void> {
       }
     }
 
-    // Check for tool calls before finishing
     const toolCall = parseToolCall(fullResponse);
     if (toolCall && toolCall.tool === 'web_search') {
       dbgResponse(reqId, 'tool_call', 'web_search');
 
       try {
-        // Execute web search with :online model
         const searchResult = await executeWebSearchText(userText, buildTextSystemPrompt());
 
-        // Update the streaming message with search results
-        updateStreamingMessage(searchResult.fullResponse);
-        finishStreamingMessage();
+        streamingContent.value = '';
 
-        // Update stats (include both requests)
         if (usage && typeof usage.cost === 'number') {
           updateSessionCost(usage.cost);
         }
@@ -567,32 +531,25 @@ export async function sendTextToAPI(userText: string): Promise<void> {
           updateSessionCost(searchResult.usage.cost);
         }
 
-        // Save to conversation history (only save the final search result, not the tool call)
-        addToConversationHistory({ role: 'user', content: userText });
-        addToConversationHistory({ role: 'assistant', content: searchResult.fullResponse });
-        saveConversationHistory();
+        addMessage({ role: 'assistant', content: searchResult.fullResponse });
       } catch (searchError) {
         dbg(`Web search error: ${searchError}`, 'error');
         showError('Web search failed: ' + String(searchError));
-        finishStreamingMessage();
+        streamingContent.value = '';
       }
     } else {
       dbgResponse(reqId, 'normal', `${fullResponse.length} chars`);
-      finishStreamingMessage();
+      streamingContent.value = '';
 
-      // Update stats
       if (usage && typeof usage.cost === 'number') {
         updateSessionCost(usage.cost);
       }
 
-      // Save to conversation history
-      addToConversationHistory({ role: 'user', content: userText });
-      addToConversationHistory({ role: 'assistant', content: fullResponse });
-      saveConversationHistory();
+      addMessage({ role: 'assistant', content: fullResponse });
     }
   } catch (error) {
     dbg(`API error: ${error}`, 'error');
     showError(String(error));
-    finishStreamingMessage();
+    streamingContent.value = '';
   }
 }

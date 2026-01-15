@@ -10,8 +10,8 @@ test.describe('Spraff App', () => {
       await expect(page.locator('.login-btn')).toBeVisible();
       await expect(page.locator('.login-btn')).toHaveText('Get started');
 
-      // Voice screen should be hidden
-      await expect(page.locator('.voice-screen')).toHaveClass(/hidden/);
+      // Voice screen should not exist when not authenticated
+      await expect(page.locator('.voice-screen')).not.toBeVisible();
     });
 
     test('shows logo and tagline', async ({ page }) => {
@@ -41,8 +41,8 @@ test.describe('Spraff App', () => {
     });
 
     test('shows voice screen when authenticated', async ({ page }) => {
-      await expect(page.locator('.voice-screen')).not.toHaveClass(/hidden/);
-      await expect(page.locator('.login-screen')).toHaveClass(/hidden/);
+      await expect(page.locator('.voice-screen')).toBeVisible();
+      await expect(page.locator('.login-screen')).not.toBeVisible();
     });
 
     test('shows main button in ready state', async ({ page }) => {
@@ -64,8 +64,10 @@ test.describe('Spraff App', () => {
 
     test('shows mode toggle with voice mode active by default', async ({ page }) => {
       await expect(page.locator('.mode-toggle')).toBeVisible();
-      await expect(page.locator('#voiceModeBtn')).toHaveClass(/active/);
-      await expect(page.locator('#textModeBtn')).not.toHaveClass(/active/);
+      // Voice mode button (first button) should be active
+      await expect(page.locator('.mode-toggle .mode-btn').first()).toHaveClass(/active/);
+      // Text mode button (second button) should not be active
+      await expect(page.locator('.mode-toggle .mode-btn').nth(1)).not.toHaveClass(/active/);
     });
   });
 
@@ -82,26 +84,23 @@ test.describe('Spraff App', () => {
       // Click the mode toggle
       await page.locator('.mode-toggle').click();
 
-      // Text mode should be active
-      await expect(page.locator('#textModeBtn')).toHaveClass(/active/);
-      await expect(page.locator('#voiceModeBtn')).not.toHaveClass(/active/);
+      // Text mode should be active (second button)
+      await expect(page.locator('.mode-toggle .mode-btn').nth(1)).toHaveClass(/active/);
+      await expect(page.locator('.mode-toggle .mode-btn').first()).not.toHaveClass(/active/);
 
       // Text input should be visible
       await expect(page.locator('.text-input-container')).toHaveClass(/visible/);
-
-      // Voice screen should have text-mode class
-      await expect(page.locator('.voice-screen')).toHaveClass(/text-mode/);
     });
 
     test('switches back to voice mode', async ({ page }) => {
       // Switch to text mode
       await page.locator('.mode-toggle').click();
-      await expect(page.locator('#textModeBtn')).toHaveClass(/active/);
+      await expect(page.locator('.mode-toggle .mode-btn').nth(1)).toHaveClass(/active/);
 
       // Switch back to voice mode
       await page.locator('.mode-toggle').click();
-      await expect(page.locator('#voiceModeBtn')).toHaveClass(/active/);
-      await expect(page.locator('.text-input-container')).not.toHaveClass(/visible/);
+      await expect(page.locator('.mode-toggle .mode-btn').first()).toHaveClass(/active/);
+      await expect(page.locator('.text-input-container')).not.toBeVisible();
     });
 
     test('text input is functional in text mode', async ({ page }) => {
@@ -133,28 +132,29 @@ test.describe('Spraff App', () => {
       const menuBtn = page.locator('.settings-menu-btn');
       const dropdown = page.locator('.settings-dropdown');
 
-      // Initially closed
-      await expect(dropdown).not.toHaveClass(/open/);
+      // Initially not visible
+      await expect(dropdown).not.toBeVisible();
 
       // Open menu
       await menuBtn.click();
-      await expect(dropdown).toHaveClass(/open/);
+      await expect(dropdown).toBeVisible();
 
       // Close by clicking elsewhere
       await page.locator('body').click({ position: { x: 10, y: 10 } });
-      await expect(dropdown).not.toHaveClass(/open/);
+      await expect(dropdown).not.toBeVisible();
     });
 
     test('has all menu items', async ({ page }) => {
       await page.locator('.settings-menu-btn').click();
 
-      await expect(page.locator('#voiceSettingsBtn')).toBeVisible();
-      await expect(page.locator('#costSettingsBtn')).toBeVisible();
-      await expect(page.locator('#copyChatBtn')).toBeVisible();
-      await expect(page.locator('#debugBtn')).toBeVisible();
-      await expect(page.locator('#aboutBtn')).toBeVisible();
-      await expect(page.locator('#privacyBtn')).toBeVisible();
-      await expect(page.locator('#logoutBtn')).toBeVisible();
+      // Check for menu items by text content
+      await expect(page.locator('.settings-dropdown button:has-text("Voice")')).toBeVisible();
+      await expect(page.locator('.settings-dropdown button:has-text("Cost")')).toBeVisible();
+      await expect(page.locator('.settings-dropdown button:has-text("Copy chat")')).toBeVisible();
+      await expect(page.locator('.settings-dropdown button:has-text("Debug")')).toBeVisible();
+      await expect(page.locator('.settings-dropdown button:has-text("About")')).toBeVisible();
+      await expect(page.locator('.settings-dropdown button:has-text("Privacy")')).toBeVisible();
+      await expect(page.locator('.settings-dropdown button:has-text("Logout")')).toBeVisible();
     });
   });
 
@@ -169,85 +169,85 @@ test.describe('Spraff App', () => {
 
     test('opens and closes voice settings modal', async ({ page }) => {
       await page.locator('.settings-menu-btn').click();
-      await page.locator('#voiceSettingsBtn').click();
+      await page.locator('.settings-dropdown button:has-text("Voice")').click();
 
-      const modal = page.locator('#voiceModal');
-      await expect(modal).not.toHaveClass(/hidden/);
+      const modal = page.locator('.modal-overlay:has(.modal-header h3:text("Voice Settings"))');
+      await expect(modal).toBeVisible();
       await expect(modal.locator('h3')).toHaveText('Voice Settings');
 
       // Close modal
-      await page.locator('#modalClose').click();
-      await expect(modal).toHaveClass(/hidden/);
+      await modal.locator('.modal-close').click();
+      await expect(modal).not.toBeVisible();
     });
 
     test('opens and closes cost modal', async ({ page }) => {
       await page.locator('.settings-menu-btn').click();
-      await page.locator('#costSettingsBtn').click();
+      await page.locator('.settings-dropdown button:has-text("Cost")').click();
 
-      const modal = page.locator('#costModal');
-      await expect(modal).not.toHaveClass(/hidden/);
+      const modal = page.locator('.modal-overlay:has(.modal-header h3:text("Cost"))');
+      await expect(modal).toBeVisible();
       await expect(modal.locator('h3')).toHaveText('Cost');
 
       // Close modal
-      await page.locator('#costModalClose').click();
-      await expect(modal).toHaveClass(/hidden/);
+      await modal.locator('.modal-close').click();
+      await expect(modal).not.toBeVisible();
     });
 
     test('opens and closes about modal', async ({ page }) => {
       await page.locator('.settings-menu-btn').click();
-      await page.locator('#aboutBtn').click();
+      await page.locator('.settings-dropdown button:has-text("About")').click();
 
-      const modal = page.locator('#aboutModal');
-      await expect(modal).not.toHaveClass(/hidden/);
+      const modal = page.locator('.modal-overlay:has(.modal-header h3:text("About"))');
+      await expect(modal).toBeVisible();
       await expect(modal.locator('h3')).toHaveText('About');
 
       // Should show build ID
-      await expect(page.locator('#buildId')).toContainText('Build:');
+      await expect(modal.locator('text=/Build:/')).toBeVisible();
 
       // Close modal
-      await page.locator('#aboutModalClose').click();
-      await expect(modal).toHaveClass(/hidden/);
+      await modal.locator('.modal-close').click();
+      await expect(modal).not.toBeVisible();
     });
 
     test('opens and closes privacy modal', async ({ page }) => {
       await page.locator('.settings-menu-btn').click();
-      await page.locator('#privacyBtn').click();
+      await page.locator('.settings-dropdown button:has-text("Privacy")').click();
 
-      const modal = page.locator('#privacyModal');
-      await expect(modal).not.toHaveClass(/hidden/);
+      const modal = page.locator('.modal-overlay:has(.modal-header h3:text("Privacy Policy"))');
+      await expect(modal).toBeVisible();
       await expect(modal.locator('h3')).toHaveText('Privacy Policy');
 
       // Close modal
-      await page.locator('#privacyModalClose').click();
-      await expect(modal).toHaveClass(/hidden/);
+      await modal.locator('.modal-close').click();
+      await expect(modal).not.toBeVisible();
     });
 
     test('opens and closes debug modal', async ({ page }) => {
       await page.locator('.settings-menu-btn').click();
-      await page.locator('#debugBtn').click();
+      await page.locator('.settings-dropdown button:has-text("Debug")').click();
 
-      const modal = page.locator('#debugModal');
-      await expect(modal).not.toHaveClass(/hidden/);
+      const modal = page.locator('.modal-overlay:has(.modal-header h3:text("Debug Console"))');
+      await expect(modal).toBeVisible();
       await expect(modal.locator('h3')).toHaveText('Debug Console');
 
       // Should have debug content area
-      await expect(page.locator('#debugContent')).toBeVisible();
+      await expect(modal.locator('.debug-content')).toBeVisible();
 
       // Close modal
-      await page.locator('#debugModalClose').click();
-      await expect(modal).toHaveClass(/hidden/);
+      await modal.locator('.modal-close').click();
+      await expect(modal).not.toBeVisible();
     });
 
     test('closes modal when clicking overlay', async ({ page }) => {
       await page.locator('.settings-menu-btn').click();
-      await page.locator('#aboutBtn').click();
+      await page.locator('.settings-dropdown button:has-text("About")').click();
 
-      const modal = page.locator('#aboutModal');
-      await expect(modal).not.toHaveClass(/hidden/);
+      const modal = page.locator('.modal-overlay:has(.modal-header h3:text("About"))');
+      await expect(modal).toBeVisible();
 
       // Click on the overlay (outside the modal content)
       await modal.click({ position: { x: 10, y: 10 } });
-      await expect(modal).toHaveClass(/hidden/);
+      await expect(modal).not.toBeVisible();
     });
   });
 
@@ -261,15 +261,15 @@ test.describe('Spraff App', () => {
       await page.reload();
 
       // Verify we're authenticated
-      await expect(page.locator('.voice-screen')).not.toHaveClass(/hidden/);
+      await expect(page.locator('.voice-screen')).toBeVisible();
 
       // Click logout
       await page.locator('.settings-menu-btn').click();
-      await page.locator('#logoutBtn').click();
+      await page.locator('.settings-dropdown button:has-text("Logout")').click();
 
       // Should show login screen
-      await expect(page.locator('.login-screen')).not.toHaveClass(/hidden/);
-      await expect(page.locator('.voice-screen')).toHaveClass(/hidden/);
+      await expect(page.locator('.login-screen')).toBeVisible();
+      await expect(page.locator('.voice-screen')).not.toBeVisible();
 
       // localStorage should be cleared
       const apiKey = await page.evaluate(() => localStorage.getItem('openrouter_api_key'));
@@ -294,11 +294,11 @@ test.describe('Spraff App', () => {
     });
 
     test('shows clear button with message count when history exists', async ({ page }) => {
-      const clearBtn = page.locator('#clearChatBtn');
+      const clearBtn = page.locator('.action-btn:has-text("Clear")');
       await expect(clearBtn).toBeVisible();
 
-      const badge = page.locator('#clearChatBadge');
-      await expect(badge).toHaveText('1'); // 1 user message
+      const badge = page.locator('.clear-chat-badge');
+      await expect(badge).toHaveText('2'); // 2 messages total
     });
 
     test('renders conversation in text mode', async ({ page }) => {
@@ -306,36 +306,24 @@ test.describe('Spraff App', () => {
       await page.locator('.mode-toggle').click();
 
       // Conversation history should be visible
-      await expect(page.locator('.conversation-history')).toHaveClass(/visible/);
+      await expect(page.locator('.conversation-history')).toBeVisible();
     });
 
-    test('clear button requires confirmation', async ({ page }) => {
-      const clearBtn = page.locator('#clearChatBtn');
+    test('clear button clears history', async ({ page }) => {
+      const clearBtn = page.locator('.action-btn:has-text("Clear")');
 
-      // First click - should show confirmation
-      await clearBtn.click();
-      await expect(clearBtn).toHaveClass(/confirming/);
-      await expect(clearBtn.locator('.clear-chat-text')).toHaveText('Clear?');
-
-      // Click elsewhere to cancel
-      await page.locator('body').click({ position: { x: 10, y: 10 } });
-      await expect(clearBtn).not.toHaveClass(/confirming/);
-      await expect(clearBtn.locator('.clear-chat-text')).toHaveText('Clear');
-    });
-
-    test('clear button clears history on double click', async ({ page }) => {
-      const clearBtn = page.locator('#clearChatBtn');
-
-      // Double click to confirm
-      await clearBtn.click();
+      // Click to clear
       await clearBtn.click();
 
-      // Button should be hidden after clearing
-      await expect(clearBtn).toHaveClass(/hidden/);
+      // Button should disappear after clearing
+      await expect(clearBtn).not.toBeVisible();
 
       // localStorage should be cleared
-      const history = await page.evaluate(() => localStorage.getItem('conversationHistory'));
-      expect(history).toBeNull();
+      const history = await page.evaluate(() => {
+        const h = localStorage.getItem('conversationHistory');
+        return h ? JSON.parse(h) : [];
+      });
+      expect(history.length).toBe(0);
     });
   });
 });

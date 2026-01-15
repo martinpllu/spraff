@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import preact from '@preact/preset-vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({ command }) => {
@@ -31,6 +32,7 @@ export default defineConfig(({ command }) => {
     },
   },
   plugins: [
+    preact(),
     // Only enable PWA in production builds to avoid service worker caching issues in dev
     ...(isProd
       ? [

@@ -1,22 +1,17 @@
-// ============ Text-to-Speech ============
+// ============ Speech Utilities ============
 
 import {
-  speechQueue,
   isSpeaking,
   shouldStopSpeaking,
-  selectedVoiceName,
-  setSpeechQueue,
-  setIsSpeaking,
-  setShouldStopSpeaking,
+  speechQueue,
   speechTotalChars,
   speechSpokenChars,
-  setSpeechTotalChars,
-  setSpeechSpokenChars,
-} from './state';
-import { setButtonState, hideStopButton } from './ui';
+  selectedVoiceName,
+  buttonState,
+} from './state/signals';
 
 // Recommended voices - high quality on-device voices
-const recommendedVoices = [
+export const recommendedVoices = [
   'Samantha (Enhanced)',
   'Ava (Premium)',
   'Zoe (Premium)',
@@ -27,15 +22,13 @@ const recommendedVoices = [
   'Google UK English Female',
   'Google UK English Male',
   'Google US English',
-  // Windows natural voices
   'Microsoft Jenny',
   'Microsoft Aria',
   'Microsoft Guy',
 ];
 
-// Low quality, novelty, or problematic voices to filter out
-const voiceBlacklist = [
-  // Apple Novelty/Effects voices
+// Low quality or novelty voices to filter out
+export const voiceBlacklist = [
   'Albert',
   'Bad News',
   'Bahh',
@@ -62,7 +55,6 @@ const voiceBlacklist = [
   'Vicki',
   'Victoria',
   'Princess',
-  // Apple Eloquence voices (robotic)
   'Eddy',
   'Flo',
   'Grandma',
@@ -71,7 +63,6 @@ const voiceBlacklist = [
   'Rocko',
   'Sandy',
   'Shelley',
-  // eSpeak voices
   'eSpeak',
   'espeak',
 ];
@@ -81,15 +72,13 @@ export function isCloudVoice(voice: SpeechSynthesisVoice): boolean {
 }
 
 export function isBlacklisted(voice: SpeechSynthesisVoice): boolean {
-  const name = voice.name;
-  return voiceBlacklist.some((blocked) => name.includes(blocked));
+  return voiceBlacklist.some((blocked) => voice.name.includes(blocked));
 }
 
 export function isRecommended(voice: SpeechSynthesisVoice): boolean {
   return recommendedVoices.some((name) => voice.name.includes(name));
 }
 
-// Get the default voice using the same logic as processQueue
 export function getDefaultVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
   const preferredLocal = [
     'Ava (Premium)',
@@ -113,11 +102,9 @@ export function getDefaultVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesis
     if (voice) return voice;
   }
 
-  // Fallback to any English local voice
   let voice = voices.find((v) => v.lang.startsWith('en') && v.localService !== false);
   if (voice) return voice;
 
-  // Last resort: any English voice
   return voices.find((v) => v.lang.startsWith('en'));
 }
 
@@ -140,42 +127,41 @@ export function sanitizeForSpeech(text: string): string {
 }
 
 export function queueSpeech(text: string, isFirst = false): void {
-  if (!text.trim() || shouldStopSpeaking) return;
+  if (!text.trim() || shouldStopSpeaking.value) return;
   const sanitized = sanitizeForSpeech(text);
   if (!sanitized) return;
 
-  // Track total characters for progress
   if (isFirst) {
-    setSpeechTotalChars(0);
-    setSpeechSpokenChars(0);
+    speechTotalChars.value = 0;
+    speechSpokenChars.value = 0;
   }
-  setSpeechTotalChars(speechTotalChars + sanitized.length);
+  speechTotalChars.value += sanitized.length;
 
-  speechQueue.push(sanitized);
-  if (!isSpeaking) processQueue();
+  speechQueue.value = [...speechQueue.value, sanitized];
+  if (!isSpeaking.value) processQueue();
 }
 
 export function processQueue(): void {
-  if (shouldStopSpeaking || speechQueue.length === 0) {
-    setIsSpeaking(false);
-    if (speechQueue.length === 0) {
-      hideStopButton();
-      setButtonState('ready');
+  const queue = speechQueue.value;
+  if (shouldStopSpeaking.value || queue.length === 0) {
+    isSpeaking.value = false;
+    if (queue.length === 0) {
+      buttonState.value = 'ready';
     }
     return;
   }
 
-  setIsSpeaking(true);
-  const text = speechQueue.shift()!;
-  const textLength = text.length;
+  isSpeaking.value = true;
+  const [text, ...rest] = queue;
+  speechQueue.value = rest;
+  const textLength = text?.length ?? 0;
 
   if (!window.speechSynthesis) {
-    setSpeechSpokenChars(speechSpokenChars + textLength);
+    speechSpokenChars.value += textLength;
     processQueue();
     return;
   }
 
-  // iOS Safari workaround: cancel any pending speech first
   speechSynthesis.cancel();
 
   const utterance = new SpeechSynthesisUtterance(text);
@@ -183,15 +169,14 @@ export function processQueue(): void {
   utterance.pitch = 1;
   utterance.volume = 1;
 
-  // Select voice
   const voices = speechSynthesis.getVoices();
   let voice: SpeechSynthesisVoice | undefined;
 
-  if (selectedVoiceName) {
-    voice = voices.find((v) => v.name === selectedVoiceName);
+  const voiceName = selectedVoiceName.value;
+  if (voiceName) {
+    voice = voices.find((v) => v.name === voiceName);
   }
 
-  // Fallback to default voice if selected not found
   if (!voice) {
     voice = getDefaultVoice(voices);
   }
@@ -200,37 +185,33 @@ export function processQueue(): void {
     utterance.voice = voice;
   }
 
-  // iOS Safari fix: onend often doesn't fire, use timeout as fallback
   let ended = false;
   const markEnded = (): void => {
     if (ended) return;
     ended = true;
-    setSpeechSpokenChars(speechSpokenChars + textLength);
+    speechSpokenChars.value += textLength;
     processQueue();
   };
 
   utterance.onend = markEnded;
   utterance.onerror = markEnded;
 
-  // Fallback timeout for iOS
-  const estimatedDuration = Math.max(2000, text.length * 80);
+  const estimatedDuration = Math.max(2000, textLength * 80);
   setTimeout(() => {
-    if (!ended && isSpeaking) {
+    if (!ended && isSpeaking.value) {
       console.warn('Speech timeout fallback triggered');
       markEnded();
     }
   }, estimatedDuration);
 
-  // iOS Safari: need to resume in case it's paused
   speechSynthesis.resume();
   speechSynthesis.speak(utterance);
 }
 
 export function stopSpeaking(): void {
-  setShouldStopSpeaking(true);
-  setSpeechQueue([]);
+  shouldStopSpeaking.value = true;
+  speechQueue.value = [];
   speechSynthesis.cancel();
-  setIsSpeaking(false);
-  setButtonState('ready');
-  hideStopButton();
+  isSpeaking.value = false;
+  buttonState.value = 'ready';
 }
