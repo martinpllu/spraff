@@ -73,11 +73,31 @@ If other models add audio support with ZDR in the future, Spraff may offer model
 
 ## Self-Hosting
 
-It's a static site with no build step. Download the files and serve them however you like.
-
-## Running locally
+Build and serve the static files however you like:
 
 ```bash
-python3 -m http.server 3000
-# Open http://localhost:3000
+pnpm install
+pnpm build
+# Serve the dist/ directory
+```
+
+## Development
+
+```bash
+pnpm install
+pnpm dev        # Dev server at https://localhost:3001
+pnpm build      # Production build
+pnpm preview    # Preview production build
+```
+
+The dev server requires HTTPS certificates (`cert.pem` and `key.pem`) for microphone access. Generate self-signed certs:
+
+```bash
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj '/CN=localhost'
+```
+
+For mobile testing, use a Cloudflare tunnel:
+
+```bash
+cloudflared tunnel --url https://localhost:3001
 ```
