@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | grep -q '\"file_path\".*src/.*\\.ts'; then ./scripts/update-build-id.sh; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
