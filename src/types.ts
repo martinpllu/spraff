@@ -1,0 +1,55 @@
+// ============ Type Definitions ============
+
+export interface Message {
+  role: 'user' | 'assistant' | 'system';
+  content: string | MessageContent[];
+}
+
+export interface MessageContent {
+  type: 'text' | 'input_audio';
+  text?: string;
+  input_audio?: {
+    data: string;
+    format: string;
+  };
+}
+
+export interface Stats {
+  sessionCost: number;
+  lastCost: number;
+  lastVoiceSize: number;
+}
+
+export interface ToolCall {
+  tool: string;
+  args?: Record<string, unknown>;
+}
+
+export interface APIUsage {
+  cost?: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+}
+
+export interface StreamResult {
+  fullResponse: string;
+  usage: APIUsage | null;
+}
+
+export type ButtonState = 'ready' | 'listening' | 'processing' | 'speaking';
+
+export type DebugLevel = 'log' | 'warn' | 'error';
+
+export interface DebugLogEntry {
+  timestamp: number;
+  level: DebugLevel;
+  message: string;
+}
+
+declare global {
+  interface Window {
+    debugLogs: DebugLogEntry[];
+    dbg: (msg: string, level?: DebugLevel) => void;
+    audioUnlocked?: boolean;
+  }
+}
