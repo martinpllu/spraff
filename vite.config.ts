@@ -1,10 +1,14 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-const isDev = process.env.NODE_ENV !== 'production';
+export default defineConfig(({ command }) => {
+  const isGitHubPages = command === 'build' && process.env.GITHUB_ACTIONS;
+  const isProd = command === 'build';
 
-export default defineConfig({
-  base: '/spraff/',
+  return {
+    // Only use /spraff/ base path when building for GitHub Pages
+    // In dev/preview, use root path for simpler local testing with OAuth
+    base: isGitHubPages ? '/spraff/' : '/',
   server: {
     port: 3001,
     https: {
@@ -28,8 +32,8 @@ export default defineConfig({
     },
   },
   plugins: [
-    // Only enable PWA in production to avoid service worker caching issues in dev
-    ...(!isDev
+    // Only enable PWA in production builds to avoid service worker caching issues in dev
+    ...(isProd
       ? [
           VitePWA({
             registerType: 'autoUpdate',
@@ -64,4 +68,5 @@ export default defineConfig({
         ]
       : []),
   ],
+  };
 });
