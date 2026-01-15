@@ -15,7 +15,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <!-- Early debug initialization -->
+  <script>
+    window.debugLogs = [];
+    window.dbg = function(msg, level) {
+      var entry = { timestamp: Date.now(), level: level || 'log', message: msg };
+      window.debugLogs.push(entry);
+    };
+    window.onerror = function(msg, url, line) {
+      window.dbg('Error: ' + msg + ' at ' + url + ':' + line, 'error');
+    };
+  </script>
 </head>
 <body>
   <!-- Landscape Warning -->
@@ -69,9 +79,10 @@
         <p style="margin-bottom: 1rem;">
           <a href="https://github.com/martinpllu/spraff" target="_blank" style="color: var(--link); text-decoration: none; font-weight: 600;">GitHub</a>
         </p>
-        <p style="color: var(--fg-muted);">
+        <p style="color: var(--fg-muted); margin-bottom: 0.5rem;">
           Created by <a href="https://www.linkedin.com/in/martin-pllu-7034513" target="_blank" style="color: var(--link); text-decoration: none;">Martin Pllu</a>
         </p>
+        <p id="buildId" style="font-family: monospace; font-size: 0.8rem; color: var(--fg-muted);"></p>
       </div>
     </div>
   </div>
@@ -111,6 +122,22 @@
           <li style="margin-bottom: 0.5rem;">Tap <strong>Add</strong> to confirm</li>
         </ol>
         <p style="color: var(--fg-muted);">The app will then launch in full-screen mode without browser controls.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Debug Modal -->
+  <div class="modal-overlay hidden" id="debugModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Debug Console</h3>
+        <button class="modal-close" id="debugModalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="debug-actions">
+          <button class="debug-clear-btn" id="debugClearBtn">Clear</button>
+        </div>
+        <div class="debug-content" id="debugContent"></div>
       </div>
     </div>
   </div>
@@ -216,6 +243,14 @@
             Install app
           </button>
           <div class="divider"></div>
+          <button id="debugBtn">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+              <path d="M8 12h8"/>
+              <path d="M12 8v8"/>
+            </svg>
+            Debug
+          </button>
           <button id="aboutBtn">
             <svg viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10"/>
@@ -278,7 +313,7 @@
 
     <!-- Hint -->
     <div class="hint-text" id="hintText">
-      Push button or <kbd>Space</kbd> to speak
+      Tap or <kbd>Space</kbd> to speak
     </div>
 
     <!-- Bottom Bar - controls only -->
@@ -323,6 +358,6 @@
 
   <div class="error-toast" id="errorToast"></div>
 
-  <script src="app.js"></script>
+  <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
