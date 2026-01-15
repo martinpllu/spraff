@@ -2,13 +2,12 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({ command }) => {
-  const isGitHubPages = command === 'build' && process.env.GITHUB_ACTIONS;
   const isProd = command === 'build';
 
   return {
-    // Only use /spraff/ base path when building for GitHub Pages
-    // In dev/preview, use root path for simpler local testing with OAuth
-    base: isGitHubPages ? '/spraff/' : '/',
+    // Use /spraff/ base path for production builds (GitHub Pages)
+    // Use root path for dev server for simpler local testing with OAuth
+    base: isProd ? '/spraff/' : '/',
   server: {
     port: 3001,
     https: {
