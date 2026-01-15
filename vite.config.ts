@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 const isDev = process.env.NODE_ENV !== 'production';
 
 export default defineConfig({
+  base: '/spraff/',
   server: {
     port: 3001,
     https: {
