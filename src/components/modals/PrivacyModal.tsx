@@ -31,82 +31,82 @@ export function PrivacyModal({ isOpen }: Props) {
           </button>
         </div>
         <div class="modal-body" style={{ lineHeight: 1.7 }}>
-          <p style={{ marginBottom: '1rem' }}>
-            Spraff is a voice-first AI chat app. There's no backend — it's a static
-            web app. Your conversations go through{' '}
-            <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
-              OpenRouter
-            </a>{' '}
-            to Gemini on Google Vertex with{' '}
-            <a
-              href="https://openrouter.ai/docs/guides/features/zdr"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'var(--accent)' }}
-            >
-              Zero Data Retention
-            </a>{' '}
-            enabled.
-          </p>
-
           <p style={{ marginBottom: '0.5rem' }}>
-            <strong>How your data flows:</strong>
+            <strong>The short version:</strong>
           </p>
-          <ul style={{ marginBottom: '1rem', paddingLeft: '1.5rem' }}>
+          <ul style={{ marginBottom: '1.25rem', paddingLeft: '1.5rem' }}>
             <li style={{ marginBottom: '0.5rem' }}>
-              <strong>This app</strong> — No backend, no data collection, no analytics.
-              Your conversations and settings are stored in your browser's local storage.
-              This data stays on your device unless you enable Google Drive sync.
+              Your chats stay on your device — we don't have servers and we don't
+              collect your data
             </li>
             <li style={{ marginBottom: '0.5rem' }}>
-              <strong>OpenRouter</strong> — Routes requests to AI providers. No
-              conversation content stored, just metadata (timestamps, usage).
+              Your conversations are sent to an AI provider to generate responses,
+              but they don't store them
             </li>
             <li style={{ marginBottom: '0.5rem' }}>
-              <strong>Google Vertex</strong> — Zero Data Retention — prompts and
-              responses aren't stored or logged by Google.
+              You can optionally sign in with Google to sync chats across devices —
+              this stores your chats privately in your own Google Drive
+            </li>
+            <li style={{ marginBottom: '0.5rem' }}>
+              You can delete all your data at any time by logging out
             </li>
           </ul>
 
-          <p style={{ marginBottom: '0.5rem' }}>
-            <strong>Google Drive sync (optional):</strong>
-          </p>
-          <ul style={{ marginBottom: '1rem', paddingLeft: '1.5rem' }}>
-            <li style={{ marginBottom: '0.5rem' }}>
-              If you sign in with Google, your chat history can be synced to your
-              Google Drive for backup and cross-device access.
-            </li>
-            <li style={{ marginBottom: '0.5rem' }}>
-              Data is stored in a private app-specific folder that only Spraff can
-              access. It won't appear in your regular Drive files.
-            </li>
-            <li style={{ marginBottom: '0.5rem' }}>
-              We only request the minimum permission needed:{' '}
-              <code style={{ fontSize: '0.85em', background: 'var(--bg-elevated)', padding: '2px 4px', borderRadius: '3px' }}>
-                drive.appdata
-              </code>{' '}
-              — we cannot see or access any of your other Google Drive files.
-            </li>
-            <li style={{ marginBottom: '0.5rem' }}>
-              You can sign out of Google at any time. Your local data is preserved
-              when you sign out.
-            </li>
-          </ul>
+          <details style={{ marginBottom: '1rem' }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: '0.75rem' }}>
+              Technical details
+            </summary>
+            <div style={{ paddingLeft: '0.5rem' }}>
+              <p style={{ marginBottom: '0.75rem' }}>
+                Spraff is a static web app with no backend. Your conversations are
+                routed through{' '}
+                <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
+                  OpenRouter
+                </a>{' '}
+                to Google Gemini with{' '}
+                <a
+                  href="https://openrouter.ai/docs/guides/features/zdr"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'var(--accent)' }}
+                >
+                  Zero Data Retention
+                </a>{' '}
+                enabled, meaning prompts and responses aren't stored or logged.
+              </p>
 
-          <p style={{ marginBottom: '0.5rem' }}>
-            <strong>Local storage:</strong>
-          </p>
-          <ul style={{ marginBottom: '1rem', paddingLeft: '1.5rem' }}>
-            <li style={{ marginBottom: '0.5rem' }}>
-              Your OpenRouter API key is stored in local storage so you stay logged in.
-            </li>
-            <li style={{ marginBottom: '0.5rem' }}>
-              Chat history is stored locally and persists between sessions.
-            </li>
-            <li style={{ marginBottom: '0.5rem' }}>
-              You can clear all local data by logging out from the menu.
-            </li>
-          </ul>
+              <p style={{ marginBottom: '0.5rem' }}>
+                <strong>Local storage:</strong>
+              </p>
+              <ul style={{ marginBottom: '0.75rem', paddingLeft: '1.5rem' }}>
+                <li style={{ marginBottom: '0.25rem' }}>
+                  Chat history and settings are stored in your browser's local storage
+                </li>
+                <li style={{ marginBottom: '0.25rem' }}>
+                  Your login credentials are also stored locally so you stay signed in
+                </li>
+              </ul>
+
+              <p style={{ marginBottom: '0.5rem' }}>
+                <strong>Google Drive sync:</strong>
+              </p>
+              <ul style={{ marginBottom: '0.75rem', paddingLeft: '1.5rem' }}>
+                <li style={{ marginBottom: '0.25rem' }}>
+                  Uses the{' '}
+                  <code style={{ fontSize: '0.85em', background: 'var(--bg-elevated)', padding: '2px 4px', borderRadius: '3px' }}>
+                    drive.appdata
+                  </code>{' '}
+                  scope — a private app folder that only Spraff can access
+                </li>
+                <li style={{ marginBottom: '0.25rem' }}>
+                  We cannot see or access any of your other Google Drive files
+                </li>
+                <li style={{ marginBottom: '0.25rem' }}>
+                  Your local data is preserved if you sign out of Google
+                </li>
+              </ul>
+            </div>
+          </details>
 
           <p style={{ color: 'var(--fg-muted)', fontSize: '0.9em' }}>
             Questions? Contact{' '}
