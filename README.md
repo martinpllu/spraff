@@ -6,7 +6,7 @@ Requires an OpenRouter account for pay-as-you-go model access. A few dollars go 
 
 Uses Gemini 3 Flash configured with Zero Data Retention. No chat data is stored at any layer.
 
-Host it yourself or use it here: [https://martinpllu.github.io/spraff](https://martinpllu.github.io/spraff)
+Host it yourself or use it here: [https://spraff.pllu.ai](https://spraff.pllu.ai)
 
 
 <p align="center">
@@ -17,7 +17,7 @@ Host it yourself or use it here: [https://martinpllu.github.io/spraff](https://m
 
 1. **Create an OpenRouter account** at [openrouter.ai](https://openrouter.ai)
 2. **Add credits** - $5 is plenty to start
-3. **Open Spraff** at https://martinpllu.github.io/spraff
+3. **Open Spraff** at https://spraff.pllu.ai
 4. **Log in** click 'Get Started' and log into to your OpenRouter account
 5. **Chat** with the AI via voice or text mode
 6. **Add to Home Screen** - recommended on mobile for easy access
@@ -26,7 +26,7 @@ Host it yourself or use it here: [https://martinpllu.github.io/spraff](https://m
 
 There's no backend - it's a static site with no server-side code. Your conversations go through [OpenRouter](https://openrouter.ai) to Gemini 3 Flash on Google Vertex with [Zero Data Retention](https://openrouter.ai/docs/guides/features/zdr) enabled:
 
-- **This app**: No backend, no data collection. Your current conversation and any pending voice upload are stored in your browser's local storage so they persist if you switch apps or refresh. This data is cleared when you log out or start a new chat.
+- **This app**: No backend, no data collection. Your chat history is stored in your browser's local storage. Optionally, you can sign in with Google to sync your chats to your personal Google Drive (in a hidden app-specific folder only you can access).
 - **OpenRouter**: No conversation content stored, just metadata (timestamps, usage)
 - **Google Vertex**: Zero Data Retention - prompts and responses aren't stored or logged
 

@@ -54,10 +54,40 @@ export interface DebugLogEntry {
   message: string;
 }
 
+// ============ Google Sync Types ============
+
+export interface GoogleUser {
+  email: string;
+  name: string;
+  picture?: string;
+}
+
+export interface GoogleTokens {
+  accessToken: string;
+  expiresAt: number;
+}
+
+export interface DriveData {
+  version: number;
+  syncedAt: number;
+  chats: Chat[];
+}
+
 declare global {
   interface Window {
     debugLogs: DebugLogEntry[];
     dbg: (msg: string, level?: DebugLevel) => void;
     audioUnlocked?: boolean;
+    google?: {
+      accounts: {
+        oauth2: {
+          initTokenClient: (config: {
+            client_id: string;
+            scope: string;
+            callback: (response: { access_token?: string; error?: string }) => void;
+          }) => { requestAccessToken: () => void };
+        };
+      };
+    };
   }
 }

@@ -12,3 +12,7 @@ export const CALLBACK_URL = window.location.origin + pathname;
 
 // Interaction thresholds
 export const LONG_PRESS_THRESHOLD = 300; // ms
+
+// Google OAuth
+export const GOOGLE_CLIENT_ID = '337230337038-rqb906lb3a613u9g2vbdivkkqjabpkoe.apps.googleusercontent.com';
+export const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/drive.appdata';

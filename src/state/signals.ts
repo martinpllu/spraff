@@ -2,6 +2,7 @@
 
 import { signal, computed, effect } from '@preact/signals';
 import type { Message, Stats, ButtonState, Chat } from '../types';
+import { scheduleDebouncedSync } from '../hooks/useGoogleSync';
 
 // ============ Helpers ============
 
@@ -144,6 +145,9 @@ effect(() => {
     localStorage.setItem('chatHistory', JSON.stringify(chats.value));
     // Also maintain backwards compatibility
     localStorage.setItem('conversationHistory', JSON.stringify(messages.value));
+
+    // Trigger Google Drive sync if enabled
+    scheduleDebouncedSync();
   } catch {
     // Silently fail
   }
