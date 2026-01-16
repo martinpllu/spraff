@@ -6,9 +6,8 @@ export default defineConfig(({ command }) => {
   const isProd = command === 'build';
 
   return {
-    // Use /spraff/ base path for production builds (GitHub Pages)
-    // Use root path for dev server for simpler local testing with OAuth
-    base: isProd ? '/spraff/' : '/',
+    // Use root path - custom domain spraff.pllu.ai doesn't need a subpath
+    base: '/',
   server: {
     port: 3001,
     https: {
