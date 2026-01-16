@@ -237,22 +237,27 @@ export function ChatSidebar() {
             </button>
           ) : (
             <div class="sync-status">
-              <div class="sync-user">
-                <svg viewBox="0 0 24 24" class="sync-check-icon">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </svg>
-                <span>{googleUser.value.email}</span>
-              </div>
               <div class="sync-info">
                 {isSyncing.value ? (
                   <span class="syncing">Syncing...</span>
                 ) : syncError.value ? (
                   <span class="sync-error" title={syncError.value}>Sync error</span>
                 ) : lastSyncTime.value ? (
-                  <span class="synced">Synced {formatSyncTime(lastSyncTime.value)}</span>
+                  <span class="synced">
+                    <svg viewBox="0 0 24 24" class="sync-check-icon">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                      <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                    Synced {formatSyncTime(lastSyncTime.value)}
+                  </span>
                 ) : syncEnabled.value ? (
-                  <span class="synced">Sync enabled</span>
+                  <span class="synced">
+                    <svg viewBox="0 0 24 24" class="sync-check-icon">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                      <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                    Sync enabled
+                  </span>
                 ) : null}
               </div>
             </div>

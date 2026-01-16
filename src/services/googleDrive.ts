@@ -87,22 +87,12 @@ function handleTokenResponse(response: { access_token?: string; error?: string }
     storeTokens(tokens);
     dbg('Google token received');
 
-    // Fetch user info
-    fetchUserInfo(response.access_token)
-      .then((user) => {
-        if (pendingAuthResolve) {
-          pendingAuthResolve(user);
-          pendingAuthResolve = null;
-          pendingAuthReject = null;
-        }
-      })
-      .catch((error) => {
-        if (pendingAuthReject) {
-          pendingAuthReject(error);
-          pendingAuthReject = null;
-          pendingAuthResolve = null;
-        }
-      });
+    // Resolve with minimal user info (no profile scope needed)
+    if (pendingAuthResolve) {
+      pendingAuthResolve({ email: '', name: 'Google User' });
+      pendingAuthResolve = null;
+      pendingAuthReject = null;
+    }
   }
 }
 

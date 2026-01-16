@@ -2106,22 +2106,6 @@ body {
   gap: 0.4rem;
 }
 
-.sync-user {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-family: 'Outfit', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--fg);
-}
-
-.sync-user span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .sync-check-icon {
   width: 16px;
   height: 16px;
@@ -2147,6 +2131,9 @@ body {
 
 .sync-info .synced {
   color: var(--success);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 /* Sync Prompt Modal */
