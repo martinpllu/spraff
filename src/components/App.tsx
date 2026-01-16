@@ -27,9 +27,15 @@ export function App() {
     }
 
     // Handle #privacy hash to open privacy modal directly
-    if (window.location.hash === '#privacy') {
-      showPrivacy.value = true;
-    }
+    const checkHash = () => {
+      if (window.location.hash === '#privacy') {
+        showPrivacy.value = true;
+      }
+    };
+
+    checkHash();
+    window.addEventListener('hashchange', checkHash);
+    return () => window.removeEventListener('hashchange', checkHash);
   }, []);
 
   // Determine which screen to show
