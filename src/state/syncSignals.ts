@@ -1,7 +1,7 @@
 // ============ Google Sync State ============
 
 import { signal, computed } from '@preact/signals';
-import type { GoogleUser, Chat } from '../types';
+import type { GoogleUser } from '../types';
 
 // ============ Helpers ============
 
@@ -39,9 +39,6 @@ export const syncEnabled = signal(loadSyncEnabled());
 export const lastSyncTime = signal<number | null>(loadLastSyncTime());
 export const syncError = signal<string | null>(null);
 
-// For initial sync prompt
-export const showSyncPrompt = signal(false);
-export const pendingRemoteChats = signal<Chat[] | null>(null);
 
 // Computed state
 export const isSignedIn = computed(() => googleUser.value !== null);
@@ -77,8 +74,6 @@ export function clearSyncState(): void {
   syncEnabled.value = false;
   lastSyncTime.value = null;
   syncError.value = null;
-  showSyncPrompt.value = false;
-  pendingRemoteChats.value = null;
 
   localStorage.removeItem('googleUser');
   localStorage.removeItem('syncEnabled');

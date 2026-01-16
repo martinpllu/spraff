@@ -11,7 +11,6 @@ import { CostModal } from '../modals/CostModal';
 import { DebugConsole } from '../modals/DebugConsole';
 import { PrivacyModal } from '../modals/PrivacyModal';
 import { InstallModal } from '../modals/InstallModal';
-import { SyncPromptModal } from '../modals/SyncPromptModal';
 import { ChatSidebar } from '../sidebar/ChatSidebar';
 import { useAudio, blobToBase64, convertToWav } from '../../hooks/useAudio';
 import {
@@ -151,7 +150,6 @@ export function VoiceScreen({
       <DebugConsole isOpen={showDebug} />
       <PrivacyModal isOpen={showPrivacy} />
       <InstallModal isOpen={showInstall} />
-      <SyncPromptModal />
     </div>
   );
 }

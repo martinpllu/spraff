@@ -9,8 +9,6 @@ import {
   syncEnabled,
   lastSyncTime,
   syncError,
-  showSyncPrompt,
-  pendingRemoteChats,
   setGoogleUser,
   setSyncEnabled,
   setLastSyncTime,
@@ -121,74 +119,19 @@ async function performInitialSync(): Promise<void> {
       return;
     }
 
-    // Both have data - show prompt for user to choose
-    dbg('Both local and remote have data - showing prompt');
-    pendingRemoteChats.value = remoteData!.chats;
-    showSyncPrompt.value = true;
+    // Both have data - merge automatically (newest wins)
+    dbg('Both local and remote have data - merging');
+    const merged = mergeChats(localChats, remoteData!.chats);
+    chats.value = merged;
+    await saveChattoDrive(merged);
+    setSyncEnabled(true);
+    setLastSyncTime(Date.now());
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Sync failed';
     syncError.value = message;
     dbg(`Initial sync error: ${message}`, 'error');
   } finally {
     isSyncing.value = false;
-  }
-}
-
-// ============ Sync Prompt Actions ============
-
-export async function handleUploadLocal(): Promise<void> {
-  dbg('User chose to upload local');
-  showSyncPrompt.value = false;
-  pendingRemoteChats.value = null;
-
-  try {
-    isSyncing.value = true;
-    await saveChattoDrive(chats.value);
-    setSyncEnabled(true);
-    setLastSyncTime(Date.now());
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Upload failed';
-    syncError.value = message;
-    dbg(`Upload error: ${message}`, 'error');
-  } finally {
-    isSyncing.value = false;
-  }
-}
-
-export async function handleDownloadRemote(): Promise<void> {
-  dbg('User chose to download remote');
-  const remote = pendingRemoteChats.value;
-  showSyncPrompt.value = false;
-  pendingRemoteChats.value = null;
-
-  if (remote) {
-    chats.value = remote;
-    setSyncEnabled(true);
-    setLastSyncTime(Date.now());
-  }
-}
-
-export async function handleMerge(): Promise<void> {
-  dbg('User chose to merge');
-  const remote = pendingRemoteChats.value;
-  showSyncPrompt.value = false;
-  pendingRemoteChats.value = null;
-
-  if (remote) {
-    try {
-      isSyncing.value = true;
-      const merged = mergeChats(chats.value, remote);
-      chats.value = merged;
-      await saveChattoDrive(merged);
-      setSyncEnabled(true);
-      setLastSyncTime(Date.now());
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Merge failed';
-      syncError.value = message;
-      dbg(`Merge error: ${message}`, 'error');
-    } finally {
-      isSyncing.value = false;
-    }
   }
 }
 
@@ -260,11 +203,5 @@ export function useGoogleSync() {
     syncEnabled,
     lastSyncTime,
     syncError,
-    showSyncPrompt,
-    pendingRemoteChats,
-    // Sync prompt handlers
-    handleUploadLocal,
-    handleDownloadRemote,
-    handleMerge,
   };
 }

@@ -38,12 +38,7 @@ Your chat history is saved in your browser's local storage, so it persists acros
 
 **Optional Google Drive sync**: Sign in with Google to sync your chats across devices. This uses Google Drive's [appDataFolder](https://developers.google.com/drive/api/guides/appdata) - a hidden folder in your personal Drive that only you (and this app) can access. No server or third party ever sees your conversations. You can revoke access anytime from your [Google Account settings](https://myaccount.google.com/permissions).
 
-When you sign in with existing chats on both your device and Drive, you can choose to:
-- Upload your local chats to Drive
-- Download your Drive chats to this device
-- Merge both (newest version of each chat wins)
-
-Sign out anytime - your local chats are preserved.
+When you sign in, your local chats and Drive chats are automatically merged - the newest version of each chat wins. Sign out anytime and your local chats are preserved.
 
 ## Cost
 
