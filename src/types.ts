@@ -40,6 +40,14 @@ export type ButtonState = 'ready' | 'listening' | 'processing' | 'speaking';
 
 export type DebugLevel = 'log' | 'warn' | 'error';
 
+export interface Chat {
+  id: string;
+  title: string;
+  messages: Message[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface DebugLogEntry {
   timestamp: number;
   level: DebugLevel;

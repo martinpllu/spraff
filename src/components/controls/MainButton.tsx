@@ -3,9 +3,10 @@ import { buttonState, isTextMode } from '../../state/signals';
 interface Props {
   onPress: () => void;
   onRelease: () => void;
+  chatTitle?: string;
 }
 
-export function MainButton({ onPress, onRelease }: Props) {
+export function MainButton({ onPress, onRelease, chatTitle }: Props) {
   const state = buttonState.value;
 
   // Don't show in text mode
@@ -30,6 +31,7 @@ export function MainButton({ onPress, onRelease }: Props) {
 
   return (
     <div class="button-container">
+      {chatTitle && <div class="current-chat-title">{chatTitle}</div>}
       <button
         class={`main-button ${state}`}
         onMouseDown={handlePressStart}

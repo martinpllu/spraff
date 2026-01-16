@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'preact/hooks';
-import { messages, streamingContent, isTextMode } from '../../state/signals';
+import { messages, streamingContent, isTextMode, currentChat } from '../../state/signals';
 import { MessageGroup } from './MessageGroup';
 import { parseMarkdown } from '../../markdown';
 
@@ -35,6 +35,7 @@ export function MessageList() {
 
   const history = messages.value;
   const streaming = streamingContent.value;
+  const chatTitle = currentChat.value?.title || 'New Chat';
 
   // Group messages into pairs (user + assistant)
   const pairs: Array<{ user: (typeof history)[0]; assistant?: (typeof history)[0] }> = [];
@@ -51,6 +52,7 @@ export function MessageList() {
       ref={containerRef}
       class={`conversation-history ${isTextMode.value ? 'visible' : ''}`}
     >
+      <div class="chat-title-header">{chatTitle}</div>
       {pairs.map((pair, i) => (
         <MessageGroup
           key={i}

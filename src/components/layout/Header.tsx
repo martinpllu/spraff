@@ -1,6 +1,7 @@
 import { useSignal } from '@preact/signals';
 import { useEffect } from 'preact/hooks';
 import { SettingsDropdown } from './SettingsDropdown';
+import { toggleSidebar, chats } from '../../state/signals';
 
 interface Props {
   onVoiceSettings: () => void;
@@ -43,8 +44,17 @@ export function Header({
     dropdownOpen.value = !dropdownOpen.value;
   };
 
+  const chatCount = chats.value.length;
+
   return (
     <div class="top-menu">
+      <button class="sidebar-toggle-btn" onClick={toggleSidebar} title="Chat History">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <line x1="9" y1="3" x2="9" y2="21" />
+        </svg>
+        {chatCount > 0 && <span class="sidebar-badge">{chatCount}</span>}
+      </button>
       <div class="settings-menu">
         <button class="settings-menu-btn" onClick={toggleDropdown} title="Settings">
           spraff

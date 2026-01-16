@@ -11,13 +11,14 @@ import { CostModal } from '../modals/CostModal';
 import { DebugConsole } from '../modals/DebugConsole';
 import { PrivacyModal } from '../modals/PrivacyModal';
 import { InstallModal } from '../modals/InstallModal';
+import { ChatSidebar } from '../sidebar/ChatSidebar';
 import { useAudio, blobToBase64, convertToWav } from '../../hooks/useAudio';
 import {
   isTextMode,
   buttonState,
-  clearMessages,
   shouldStopSpeaking,
   setLastVoiceSize,
+  currentChat,
 } from '../../state/signals';
 import { sendAudioToAPI } from '../../api';
 import { dbg } from '../../debug';
@@ -112,12 +113,12 @@ export function VoiceScreen({
     cancelRecording();
   };
 
-  const handleClearChat = () => {
-    clearMessages();
-  };
+  const chatTitle = currentChat.value?.title || 'New Chat';
 
   return (
     <div class="voice-screen">
+      <ChatSidebar />
+
       <Header
         onVoiceSettings={() => (showVoice.value = true)}
         onCost={() => (showCost.value = true)}
@@ -132,7 +133,7 @@ export function VoiceScreen({
 
       <TextInput />
 
-      <MainButton onPress={handlePress} onRelease={handleRelease} />
+      <MainButton onPress={handlePress} onRelease={handleRelease} chatTitle={chatTitle} />
 
       {!isTextMode.value && (
         <div class="hint-text">
@@ -140,7 +141,7 @@ export function VoiceScreen({
         </div>
       )}
 
-      <BottomBar onCancel={handleCancel} onClearChat={handleClearChat} />
+      <BottomBar onCancel={handleCancel} />
 
       {/* Modals */}
       <VoiceSettings isOpen={showVoice} />

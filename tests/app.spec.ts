@@ -293,14 +293,6 @@ test.describe('Spraff App', () => {
       await page.reload();
     });
 
-    test('shows clear button with message count when history exists', async ({ page }) => {
-      const clearBtn = page.locator('.action-btn:has-text("Clear")');
-      await expect(clearBtn).toBeVisible();
-
-      const badge = page.locator('.clear-chat-badge');
-      await expect(badge).toHaveText('2'); // 2 messages total
-    });
-
     test('renders conversation in text mode', async ({ page }) => {
       // Switch to text mode
       await page.locator('.mode-toggle').click();
@@ -309,21 +301,17 @@ test.describe('Spraff App', () => {
       await expect(page.locator('.conversation-history')).toBeVisible();
     });
 
-    test('clear button clears history', async ({ page }) => {
-      const clearBtn = page.locator('.action-btn:has-text("Clear")');
+    test('shows chat title in text mode', async ({ page }) => {
+      // Switch to text mode
+      await page.locator('.mode-toggle').click();
 
-      // Click to clear
-      await clearBtn.click();
+      // Chat title header should be visible
+      await expect(page.locator('.chat-title-header')).toBeVisible();
+    });
 
-      // Button should disappear after clearing
-      await expect(clearBtn).not.toBeVisible();
-
-      // localStorage should be cleared
-      const history = await page.evaluate(() => {
-        const h = localStorage.getItem('conversationHistory');
-        return h ? JSON.parse(h) : [];
-      });
-      expect(history.length).toBe(0);
+    test('shows sidebar toggle button', async ({ page }) => {
+      // Sidebar toggle button should be visible
+      await expect(page.locator('.sidebar-toggle-btn')).toBeVisible();
     });
   });
 });
