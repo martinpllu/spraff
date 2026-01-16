@@ -233,7 +233,7 @@ export function ChatSidebar() {
           {!googleUser.value ? (
             <button class="google-signin-btn" onClick={signIn} disabled={isSyncing.value}>
               <GoogleIcon />
-              <span>Sign in to sync</span>
+              <span>Sign in with Google</span>
             </button>
           ) : (
             <div class="sync-status">

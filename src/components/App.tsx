@@ -16,13 +16,18 @@ export function App() {
   const showInstall = useSignal(false);
   const showVoice = useSignal(false);
 
-  // Handle OAuth callback on mount
+  // Handle OAuth callback and hash routing on mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
 
     if (code) {
       handleOAuthCallback(code);
+    }
+
+    // Handle #privacy hash to open privacy modal directly
+    if (window.location.hash === '#privacy') {
+      showPrivacy.value = true;
     }
   }, []);
 
