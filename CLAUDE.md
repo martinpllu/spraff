@@ -24,3 +24,7 @@ cloudflared tunnel --url https://localhost:3001
 ## Debug Console
 
 The app includes a debug console accessible from the menu. Use the `dbg()` function from `./debug` for logging.
+
+## Deployment
+
+Hosted on **GitHub Pages** with custom domain `spraff.pllu.ai`. Push to `main` triggers automatic deployment via GitHub Actions.
