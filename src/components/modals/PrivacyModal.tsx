@@ -37,6 +37,18 @@ export function PrivacyModal({ isOpen }: Props) {
             messages are sent to an AI provider that doesn't store them. You can
             optionally sync your chat history to your own Google Drive.
           </p>
+          <p style={{ marginBottom: '1.25rem' }}>
+            Logging out clears all data from your device. If you've synced to
+            Google Drive, you can revoke access from your{' '}
+            <a
+              href="https://myaccount.google.com/permissions"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--accent)' }}
+            >
+              Google Account settings
+            </a>.
+          </p>
 
           <details style={{ marginBottom: '1rem' }}>
             <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: '0.75rem' }}>

@@ -78,7 +78,13 @@ export function useOAuth() {
     dbg('Logging out');
     clearCredentials();
     messages.value = [];
+    // Clear all local data
     localStorage.removeItem('conversationHistory');
+    localStorage.removeItem('chatHistory');
+    localStorage.removeItem('currentChatId');
+    localStorage.removeItem('pendingVoiceMessage');
+    localStorage.removeItem('pendingVoiceTimestamp');
+    localStorage.removeItem('googleTokens');
     currentScreen.value = 'login';
   }
 
