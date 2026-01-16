@@ -174,15 +174,20 @@ body {
   transform: translateY(0) scale(0.98);
 }
 
-.login-about {
+.login-links {
+  display: flex;
+  gap: 1.5rem;
   margin-top: 1.5rem;
+  opacity: 0;
+  animation: btnAppear 0.5s ease-out 0.5s forwards;
+}
+
+.login-about {
   font-family: 'Outfit', sans-serif;
   font-size: 0.9rem;
   color: var(--fg-muted);
   text-decoration: underline;
   transition: color 0.2s ease;
-  opacity: 0;
-  animation: btnAppear 0.5s ease-out 0.5s forwards;
 }
 
 .login-about:hover {

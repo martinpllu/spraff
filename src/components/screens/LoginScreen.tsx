@@ -31,14 +31,19 @@ export function LoginScreen() {
       <button class="login-btn" onClick={startOAuthFlow}>
         Get started
       </button>
-      <a
-        class="login-about"
-        href="https://github.com/martinpllu/spraff"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        About
-      </a>
+      <div class="login-links">
+        <a
+          class="login-about"
+          href="https://github.com/martinpllu/spraff"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          About
+        </a>
+        <a class="login-about" href="#privacy">
+          Privacy
+        </a>
+      </div>
     </div>
   );
 }

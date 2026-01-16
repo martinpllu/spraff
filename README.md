@@ -1,12 +1,12 @@
 # Spraff
 
-**Voice and text chat with AI. Your data stays yours.**
+**Private voice and text chat with AI.**
 
 Host it yourself or use it here: [https://spraff.pllu.ai](https://spraff.pllu.ai)
 
 ## Privacy
 
-Your data stays yours. Spraff runs entirely in your browser. We don't have servers and we never see your conversations. When you chat, your messages are sent to an AI provider that doesn't store them. You can optionally sync your chat history to your own Google Drive.
+**Your data stays yours.** Spraff runs entirely in your browser. We don't have servers and we never see your conversations. When you chat, your messages are sent to an AI provider that doesn't store them (Google Gemini 3 Flash with Zero Data Retention configured). You can optionally sync your chat history to your own Google Drive.
 
 Logging out clears all data from your device. If you've synced to Google Drive, you can revoke access from your [Google Account settings](https://myaccount.google.com/permissions).
 
