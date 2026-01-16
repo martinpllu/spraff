@@ -32,9 +32,6 @@ export function PrivacyModal({ isOpen }: Props) {
         </div>
         <div class="modal-body" style={{ lineHeight: 1.7 }}>
           <p style={{ marginBottom: '1rem' }}>
-            <strong>Last updated:</strong> January 2025
-          </p>
-          <p style={{ marginBottom: '1rem' }}>
             Spraff is a voice-first AI chat app. There's no backend — it's a static
             web app. Your conversations go through{' '}
             <a href="https://openrouter.ai" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
