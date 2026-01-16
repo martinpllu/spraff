@@ -4,6 +4,7 @@ import { apiKey } from '../state/signals';
 import { useOAuth } from '../hooks/useOAuth';
 import { LoginScreen } from './screens/LoginScreen';
 import { VoiceScreen } from './screens/VoiceScreen';
+import { PrivacyModal } from './modals/PrivacyModal';
 
 export function App() {
   const { handleOAuthCallback } = useOAuth();
@@ -60,6 +61,9 @@ export function App() {
           showVoice={showVoice}
         />
       )}
+
+      {/* Privacy modal renders at app level so it's accessible when logged out */}
+      <PrivacyModal isOpen={showPrivacy} />
     </>
   );
 }

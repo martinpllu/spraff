@@ -9,7 +9,6 @@ import { VoiceSettings } from '../modals/VoiceSettings';
 import { AboutModal } from '../modals/AboutModal';
 import { CostModal } from '../modals/CostModal';
 import { DebugConsole } from '../modals/DebugConsole';
-import { PrivacyModal } from '../modals/PrivacyModal';
 import { InstallModal } from '../modals/InstallModal';
 import { ChatSidebar } from '../sidebar/ChatSidebar';
 import { useAudio, blobToBase64, convertToWav } from '../../hooks/useAudio';
@@ -148,8 +147,8 @@ export function VoiceScreen({
       <AboutModal isOpen={showAbout} />
       <CostModal isOpen={showCost} />
       <DebugConsole isOpen={showDebug} />
-      <PrivacyModal isOpen={showPrivacy} />
       <InstallModal isOpen={showInstall} />
+      {/* Note: PrivacyModal is rendered at App level so it's accessible when logged out */}
     </div>
   );
 }
