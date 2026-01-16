@@ -450,12 +450,19 @@ body {
   color: var(--secondary);
 }
 
-/* Current chat title in voice mode */
-.current-chat-title {
+/* Current chat title area in voice mode */
+.chat-title-area {
   position: absolute;
-  top: -55px;
+  top: -75px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.current-chat-title {
   max-width: 280px;
   font-family: 'Outfit', sans-serif;
   font-size: 0.95rem;
@@ -467,6 +474,38 @@ body {
   text-overflow: ellipsis;
   user-select: none;
   -webkit-user-select: none;
+}
+
+.new-chat-btn-voice {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0.7;
+}
+
+.new-chat-btn-voice svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.new-chat-btn-voice:hover {
+  opacity: 1;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* Hint text below button */
