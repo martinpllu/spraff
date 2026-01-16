@@ -40,7 +40,7 @@ export function LoginScreen() {
         >
           About
         </a>
-        <a class="login-about" href="#privacy">
+        <a class="login-about" href="https://spraff.pllu.ai/#privacy">
           Privacy
         </a>
       </div>
