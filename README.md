@@ -1,10 +1,10 @@
 # Spraff
 
-**Voice and text chat with AI, no subscription, no data stored.**
+**Voice and text chat with AI. No subscription, no backend, your data stays yours.**
 
 Requires an OpenRouter account for pay-as-you-go model access. A few dollars go a long way with most conversations being a fraction of a cent.
 
-Uses Gemini 3 Flash configured with Zero Data Retention. No chat data is stored at any layer.
+Uses Gemini 3 Flash configured with Zero Data Retention - your conversations aren't stored or logged by the AI provider.
 
 Host it yourself or use it here: [https://spraff.pllu.ai](https://spraff.pllu.ai)
 
@@ -24,11 +24,26 @@ Host it yourself or use it here: [https://spraff.pllu.ai](https://spraff.pllu.ai
 
 ## Privacy
 
-There's no backend - it's a static site with no server-side code. Your conversations go through [OpenRouter](https://openrouter.ai) to Gemini 3 Flash on Google Vertex with [Zero Data Retention](https://openrouter.ai/docs/guides/features/zdr) enabled:
+Spraff is a static site with no backend - there's no server collecting or storing your data. Your conversations go through [OpenRouter](https://openrouter.ai) to Gemini 3 Flash on Google Vertex with [Zero Data Retention](https://openrouter.ai/docs/guides/features/zdr) enabled.
 
-- **This app**: No backend, no data collection. Your chat history is stored in your browser's local storage. Optionally, you can sign in with Google to sync your chats to your personal Google Drive (in a hidden app-specific folder only you can access).
-- **OpenRouter**: No conversation content stored, just metadata (timestamps, usage)
-- **Google Vertex**: Zero Data Retention - prompts and responses aren't stored or logged
+**Where your data lives:**
+
+- **Chat history**: Stored locally in your browser. It never leaves your device unless you enable sync.
+- **OpenRouter**: Only sees metadata (timestamps, token usage) - conversation content is not stored.
+- **Google Vertex**: Zero Data Retention enabled - prompts and responses aren't stored or logged.
+
+## Chat History & Sync
+
+Your chat history is saved in your browser's local storage, so it persists across sessions on that device.
+
+**Optional Google Drive sync**: Sign in with Google to sync your chats across devices. This uses Google Drive's [appDataFolder](https://developers.google.com/drive/api/guides/appdata) - a hidden folder in your personal Drive that only you (and this app) can access. No server or third party ever sees your conversations. You can revoke access anytime from your [Google Account settings](https://myaccount.google.com/permissions).
+
+When you sign in with existing chats on both your device and Drive, you can choose to:
+- Upload your local chats to Drive
+- Download your Drive chats to this device
+- Merge both (newest version of each chat wins)
+
+Sign out anytime - your local chats are preserved.
 
 ## Cost
 

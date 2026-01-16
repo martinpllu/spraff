@@ -96,23 +96,6 @@ function handleTokenResponse(response: { access_token?: string; error?: string }
   }
 }
 
-async function fetchUserInfo(accessToken: string): Promise<GoogleUser> {
-  const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch user info');
-  }
-
-  const data = (await response.json()) as { email: string; name: string; picture?: string };
-  return {
-    email: data.email,
-    name: data.name,
-    picture: data.picture,
-  };
-}
-
 // ============ Auth Actions ============
 
 export function signIn(): Promise<GoogleUser> {
