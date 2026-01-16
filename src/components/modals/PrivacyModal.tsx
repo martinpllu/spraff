@@ -37,11 +37,6 @@ export function PrivacyModal({ isOpen }: Props) {
             messages are sent to an AI provider that doesn't store them. You can
             optionally sync your chat history to your own Google Drive.
           </p>
-          <ul style={{ marginBottom: '1.25rem', paddingLeft: '1.5rem' }}>
-            <li style={{ marginBottom: '0.5rem' }}>
-              You can delete all your data at any time by logging out
-            </li>
-          </ul>
 
           <details style={{ marginBottom: '1rem' }}>
             <summary style={{ cursor: 'pointer', fontWeight: 600, marginBottom: '0.75rem' }}>
