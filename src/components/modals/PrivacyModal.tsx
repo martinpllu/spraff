@@ -36,16 +36,16 @@ export function PrivacyModal({ isOpen }: Props) {
           </p>
           <ul style={{ marginBottom: '1.25rem', paddingLeft: '1.5rem' }}>
             <li style={{ marginBottom: '0.5rem' }}>
-              Your chats stay on your device — we don't have servers and we don't
-              collect your data
+              Your chats stay on your device. We don't have servers and we don't
+              collect your data.
             </li>
             <li style={{ marginBottom: '0.5rem' }}>
               Your conversations are sent to an AI provider to generate responses,
               but they don't store them
             </li>
             <li style={{ marginBottom: '0.5rem' }}>
-              You can optionally sign in with Google to sync chats across devices —
-              this stores your chats privately in your own Google Drive
+              You can optionally sign in with Google to sync chats across devices.
+              This stores your chats privately in your own Google Drive.
             </li>
             <li style={{ marginBottom: '0.5rem' }}>
               You can delete all your data at any time by logging out
@@ -96,7 +96,7 @@ export function PrivacyModal({ isOpen }: Props) {
                   <code style={{ fontSize: '0.85em', background: 'var(--bg-elevated)', padding: '2px 4px', borderRadius: '3px' }}>
                     drive.appdata
                   </code>{' '}
-                  scope — a private app folder that only Spraff can access
+                  scope, a private app folder that only Spraff can access
                 </li>
                 <li style={{ marginBottom: '0.25rem' }}>
                   We cannot see or access any of your other Google Drive files
