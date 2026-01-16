@@ -31,22 +31,13 @@ export function PrivacyModal({ isOpen }: Props) {
           </button>
         </div>
         <div class="modal-body" style={{ lineHeight: 1.7 }}>
-          <p style={{ marginBottom: '1rem' }}>
-            Spraff runs entirely in your browser on your device.
+          <p style={{ marginBottom: '1.25rem' }}>
+            Your data stays yours. Spraff runs entirely in your browser. We don't
+            have servers and we never see your conversations. When you chat, your
+            messages are sent to an AI provider that doesn't store them. You can
+            optionally sync your chat history to your own Google Drive.
           </p>
           <ul style={{ marginBottom: '1.25rem', paddingLeft: '1.5rem' }}>
-            <li style={{ marginBottom: '0.5rem' }}>
-              Your chats stay on your device. We don't have servers and we don't
-              collect your data.
-            </li>
-            <li style={{ marginBottom: '0.5rem' }}>
-              Your conversations are sent to an AI provider to generate responses,
-              but they don't store them
-            </li>
-            <li style={{ marginBottom: '0.5rem' }}>
-              You can optionally sign in with Google to sync chats across devices.
-              This stores your chats privately in your own Google Drive.
-            </li>
             <li style={{ marginBottom: '0.5rem' }}>
               You can delete all your data at any time by logging out
             </li>

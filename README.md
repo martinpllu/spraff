@@ -1,10 +1,10 @@
 # Spraff
 
-**Voice and text chat with AI. No subscription, no backend, your data stays yours.**
+**Voice and text chat with AI. Your data stays yours.**
 
-Requires an OpenRouter account for pay-as-you-go model access. A few dollars go a long way with most conversations being a fraction of a cent.
+Spraff runs entirely in your browser. We don't have servers and we never see your conversations. When you chat, your messages are sent to an AI provider that doesn't store them. You can optionally sync your chat history to your own Google Drive.
 
-Uses Gemini 3 Flash configured with Zero Data Retention - your conversations aren't stored or logged by the AI provider.
+Requires an OpenRouter account for pay-as-you-go model access. A few dollars go a long way with most conversations costing a fraction of a cent.
 
 Host it yourself or use it here: [https://spraff.pllu.ai](https://spraff.pllu.ai)
 
