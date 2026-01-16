@@ -31,8 +31,8 @@ export function PrivacyModal({ isOpen }: Props) {
           </button>
         </div>
         <div class="modal-body" style={{ lineHeight: 1.7 }}>
-          <p style={{ marginBottom: '0.5rem' }}>
-            <strong>The short version:</strong>
+          <p style={{ marginBottom: '1rem' }}>
+            Spraff runs entirely in your browser on your device.
           </p>
           <ul style={{ marginBottom: '1.25rem', paddingLeft: '1.5rem' }}>
             <li style={{ marginBottom: '0.5rem' }}>
