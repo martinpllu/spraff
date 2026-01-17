@@ -450,19 +450,12 @@ body {
   color: var(--secondary);
 }
 
-/* Current chat title area in voice mode */
-.chat-title-area {
+/* Current chat title in voice mode */
+.current-chat-title {
   position: absolute;
-  top: -75px;
+  top: -55px;
   left: 50%;
   transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.current-chat-title {
   max-width: 280px;
   font-family: 'Outfit', sans-serif;
   font-size: 0.95rem;
@@ -476,26 +469,32 @@ body {
   -webkit-user-select: none;
 }
 
+/* New chat button - in bottom bar */
 .new-chat-btn-voice {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.65rem;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-family: 'Outfit', sans-serif;
-  font-size: 0.75rem;
-  font-weight: 500;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 44px;
+  padding: 0 1rem;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   color: var(--fg-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
-  opacity: 0.7;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .new-chat-btn-voice svg {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
@@ -503,9 +502,26 @@ body {
 }
 
 .new-chat-btn-voice:hover {
-  opacity: 1;
   border-color: var(--accent);
   color: var(--accent);
+  background: var(--accent-light);
+}
+
+.new-chat-btn-voice:focus,
+.new-chat-btn-voice:focus-visible {
+  outline: none;
+}
+
+.new-chat-btn-voice:active {
+  transform: scale(0.95);
+  background: var(--bg-warm);
+  transition: transform 0.05s ease, background 0.05s ease;
+}
+
+.new-chat-btn-voice.clicked {
+  border-color: var(--border) !important;
+  color: var(--fg-muted) !important;
+  background: var(--surface) !important;
 }
 
 /* Hint text below button */
@@ -590,19 +606,20 @@ body {
   bottom: 1.25rem;
   left: 50%;
   transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: calc(100% - 3rem);
-  max-width: 580px;
+  display: grid;
+  grid-template-columns: auto auto auto;
+  gap: 12px;
   z-index: 50;
 }
 
+.bottom-bar-left,
+.bottom-bar-center,
 .bottom-bar-right {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
   height: 44px;
+  min-width: 96px;
 }
 
 .action-btn {

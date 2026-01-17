@@ -132,6 +132,7 @@ export function useAudio() {
       recorder.stop();
     }
     isListening.value = false;
+    buttonState.value = 'ready';
     dbg('Recording cancelled');
   }
 

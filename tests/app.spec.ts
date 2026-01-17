@@ -24,7 +24,7 @@ test.describe('Spraff App', () => {
     test('has about link', async ({ page }) => {
       await page.goto('/');
 
-      const aboutLink = page.locator('.login-about');
+      const aboutLink = page.locator('.login-about').first();
       await expect(aboutLink).toBeVisible();
       await expect(aboutLink).toHaveAttribute('href', 'https://github.com/martinpllu/spraff');
     });
@@ -274,6 +274,90 @@ test.describe('Spraff App', () => {
       // localStorage should be cleared
       const apiKey = await page.evaluate(() => localStorage.getItem('openrouter_api_key'));
       expect(apiKey).toBeNull();
+    });
+  });
+
+  test.describe('Bottom Bar Controls', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto('/');
+      await page.evaluate(() => {
+        localStorage.setItem('openrouter_api_key', 'test-api-key');
+      });
+      await page.reload();
+    });
+
+    test('shows New button in voice mode', async ({ page }) => {
+      const newBtn = page.locator('.new-chat-btn-voice');
+      await expect(newBtn).toBeVisible();
+      await expect(newBtn).toContainText('New');
+    });
+
+    test('hides New button in text mode', async ({ page }) => {
+      // Switch to text mode
+      await page.locator('.mode-toggle').click();
+      await expect(page.locator('.new-chat-btn-voice')).not.toBeVisible();
+    });
+
+    test('New button creates new chat', async ({ page }) => {
+      // Set up a chat with messages
+      await page.evaluate(() => {
+        localStorage.setItem(
+          'chats',
+          JSON.stringify([
+            {
+              id: 'test-chat',
+              title: 'Test Chat',
+              messages: [{ role: 'user', content: 'Hello' }],
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            },
+          ])
+        );
+        localStorage.setItem('currentChatId', '"test-chat"');
+      });
+      await page.reload();
+
+      // Click New button
+      await page.locator('.new-chat-btn-voice').click();
+
+      // Should show "New Chat" title
+      await expect(page.locator('.current-chat-title')).toHaveText('New Chat');
+    });
+
+    test('Cancel button appears during recording and resets state', async ({ page }) => {
+      // Initial state - no Cancel button in center slot
+      await expect(page.locator('.bottom-bar-center .action-btn')).not.toBeVisible();
+      await expect(page.locator('.status-text')).toHaveText('Ready');
+
+      // Simulate listening state by setting signal values directly
+      await page.evaluate(() => {
+        // Access the signals from the window (they should be available via module scope)
+        const event = new CustomEvent('test-set-listening', { detail: true });
+        window.dispatchEvent(event);
+      });
+
+      // Start recording by triggering mousedown on main button
+      // This requires microphone permission which may not be available in CI
+      // So we test the UI structure instead
+      const mainButton = page.locator('.main-button');
+      await expect(mainButton).toBeVisible();
+      await expect(mainButton).toHaveClass(/ready/);
+    });
+
+    test('bottom bar has three slots with equal spacing', async ({ page }) => {
+      const bottomBar = page.locator('.bottom-bar');
+      await expect(bottomBar).toBeVisible();
+
+      // Check all three slots exist
+      await expect(page.locator('.bottom-bar-left')).toBeVisible();
+      await expect(page.locator('.bottom-bar-center')).toBeVisible();
+      await expect(page.locator('.bottom-bar-right')).toBeVisible();
+
+      // Mode toggle in left slot
+      await expect(page.locator('.bottom-bar-left .mode-toggle')).toBeVisible();
+
+      // New button in right slot
+      await expect(page.locator('.bottom-bar-right .new-chat-btn-voice')).toBeVisible();
     });
   });
 

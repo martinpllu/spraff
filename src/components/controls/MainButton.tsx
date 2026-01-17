@@ -1,4 +1,4 @@
-import { buttonState, isTextMode, createNewChat } from '../../state/signals';
+import { buttonState, isTextMode } from '../../state/signals';
 
 interface Props {
   onPress: () => void;
@@ -31,18 +31,7 @@ export function MainButton({ onPress, onRelease, chatTitle }: Props) {
 
   return (
     <div class="button-container">
-      {chatTitle && (
-        <div class="chat-title-area">
-          <div class="current-chat-title">{chatTitle}</div>
-          <button class="new-chat-btn-voice" onClick={createNewChat}>
-            <svg viewBox="0 0 24 24">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            New chat
-          </button>
-        </div>
-      )}
+      {chatTitle && <div class="current-chat-title">{chatTitle}</div>}
       <button
         class={`main-button ${state}`}
         onMouseDown={handlePressStart}
