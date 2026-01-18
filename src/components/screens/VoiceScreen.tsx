@@ -51,32 +51,27 @@ export function VoiceScreen({
     showInstallButton.value = isIOS && !isStandalone;
   }, []);
 
-  // Keyboard shortcut for voice mode
+  // Keyboard shortcut for voice mode - toggle on Space
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only in voice mode, when ready
-      if (isTextMode.value || buttonState.value !== 'ready') return;
+      // Only in voice mode
+      if (isTextMode.value) return;
 
-      // Space to start recording
+      // Space to toggle recording
       if (e.code === 'Space' && !e.repeat) {
         e.preventDefault();
-        handlePress();
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        e.preventDefault();
-        handleRelease();
+        if (buttonState.value === 'ready') {
+          handlePress();
+        } else if (buttonState.value === 'listening') {
+          handleRelease();
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
 

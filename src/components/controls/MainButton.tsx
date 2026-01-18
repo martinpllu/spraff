@@ -12,19 +12,11 @@ export function MainButton({ onPress, onRelease, chatTitle }: Props) {
   // Don't show in text mode
   if (isTextMode.value) return null;
 
-  const handlePressStart = (e: Event) => {
+  const handleClick = (e: Event) => {
     e.preventDefault();
-    onPress();
-  };
-
-  const handlePressEnd = (e: Event) => {
-    e.preventDefault();
-    onRelease();
-  };
-
-  const handleMouseLeave = () => {
-    // If dragged away while holding, treat as release
-    if (state === 'listening') {
+    if (state === 'ready') {
+      onPress();
+    } else if (state === 'listening') {
       onRelease();
     }
   };
@@ -34,11 +26,7 @@ export function MainButton({ onPress, onRelease, chatTitle }: Props) {
       {chatTitle && <div class="current-chat-title">{chatTitle}</div>}
       <button
         class={`main-button ${state}`}
-        onMouseDown={handlePressStart}
-        onMouseUp={handlePressEnd}
-        onMouseLeave={handleMouseLeave}
-        onTouchStart={handlePressStart}
-        onTouchEnd={handlePressEnd}
+        onClick={handleClick}
       >
         <svg class="mic-icon" viewBox="0 0 24 24">
           <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
