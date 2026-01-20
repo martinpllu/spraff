@@ -114,6 +114,7 @@ async function performInitialSync(): Promise<void> {
       // Only remote data - download to local
       dbg('Downloading chats from Drive');
       chats.value = remoteData.chats;
+      // No need to refresh - messages is a computed signal that auto-updates
       setSyncEnabled(true);
       setLastSyncTime(remoteData.syncedAt);
       return;
@@ -123,6 +124,7 @@ async function performInitialSync(): Promise<void> {
     dbg('Both local and remote have data - merging');
     const merged = mergeChats(localChats, remoteData!.chats);
     chats.value = merged;
+    // No need to refresh - messages is a computed signal that auto-updates
     await saveChattoDrive(merged);
     setSyncEnabled(true);
     setLastSyncTime(Date.now());
@@ -142,10 +144,30 @@ export function useGoogleSync() {
   useEffect(() => {
     initializeGoogleAuth();
 
-    // Check if we have a valid session and should resume sync
+    // Auto-sync on load if we have a valid session
     if (googleUser.value && hasValidToken() && syncEnabled.value) {
-      dbg('Resuming sync session');
-      // Could optionally pull latest from Drive here
+      dbg('Resuming sync session - pulling latest');
+      // Pull latest from Drive on app load
+      (async () => {
+        try {
+          isSyncing.value = true;
+          syncError.value = null;
+          const remoteData = await fetchChatsFromDrive();
+          if (remoteData) {
+            const merged = mergeChats(chats.value, remoteData.chats);
+            chats.value = merged;
+            // No need to refresh - messages is a computed signal that auto-updates
+          }
+          setLastSyncTime(Date.now());
+          dbg('Auto-sync on load completed');
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Sync failed';
+          syncError.value = message;
+          dbg(`Auto-sync error: ${message}`, 'error');
+        } finally {
+          isSyncing.value = false;
+        }
+      })();
     }
   }, []);
 
@@ -183,11 +205,27 @@ export function useGoogleSync() {
     try {
       isSyncing.value = true;
       syncError.value = null;
-      await saveChattoDrive(chats.value);
+
+      // Fetch remote data and merge (bi-directional sync)
+      const remoteData = await fetchChatsFromDrive();
+      const localChats = chats.value;
+
+      if (remoteData) {
+        const merged = mergeChats(localChats, remoteData.chats);
+        chats.value = merged;
+        // No need to refresh - messages is a computed signal that auto-updates
+        await saveChattoDrive(merged);
+      } else {
+        // No remote data, just push local
+        await saveChattoDrive(localChats);
+      }
+
       setLastSyncTime(Date.now());
+      dbg('Manual sync completed');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Sync failed';
       syncError.value = message;
+      dbg(`Manual sync error: ${message}`, 'error');
     } finally {
       isSyncing.value = false;
     }

@@ -37,13 +37,27 @@ export function MessageList() {
   const streaming = streamingContent.value;
   const chatTitle = currentChat.value?.title || 'New Chat';
 
-  // Group messages into pairs (user + assistant)
+  // Group messages into pairs (user + assistant), checking actual roles
   const pairs: Array<{ user: (typeof history)[0]; assistant?: (typeof history)[0] }> = [];
-  for (let i = 0; i < history.length; i += 2) {
-    const user = history[i];
-    const assistant = history[i + 1];
-    if (user) {
-      pairs.push({ user, assistant });
+  for (let i = 0; i < history.length; i++) {
+    const msg = history[i];
+    if (!msg) continue;
+
+    if (msg.role === 'user') {
+      // Start a new pair with this user message
+      const nextMsg = history[i + 1];
+      if (nextMsg?.role === 'assistant') {
+        pairs.push({ user: msg, assistant: nextMsg });
+        i++; // Skip the assistant message since we've paired it
+      } else {
+        pairs.push({ user: msg });
+      }
+    } else if (msg.role === 'assistant' && pairs.length > 0) {
+      // Orphan assistant message - attach to last pair if it has no assistant
+      const lastPair = pairs[pairs.length - 1];
+      if (lastPair && !lastPair.assistant) {
+        lastPair.assistant = msg;
+      }
     }
   }
 

@@ -2,7 +2,7 @@
 
 import { OPENROUTER_AUTH_URL, OPENROUTER_API_URL, CALLBACK_URL } from '../config';
 import { dbg } from '../debug';
-import { apiKey, currentScreen, messages } from '../state/signals';
+import { apiKey, currentScreen, chats, currentChatId } from '../state/signals';
 
 function generateCodeVerifier(): string {
   const array = new Uint8Array(32);
@@ -77,7 +77,9 @@ export function useOAuth() {
   function logout(): void {
     dbg('Logging out');
     clearCredentials();
-    messages.value = [];
+    // Clear chat state (messages is derived from chats, so this clears messages too)
+    chats.value = [];
+    currentChatId.value = null;
     // Clear all local data
     localStorage.removeItem('conversationHistory');
     localStorage.removeItem('chatHistory');

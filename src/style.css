@@ -2168,7 +2168,86 @@ body {
 .sync-status {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sync-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--fg);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sync-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.sync-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.sync-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.sync-btn.has-error {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.sync-btn.has-error:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: #dc2626;
+}
+
+.sync-icon {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  flex-shrink: 0;
+}
+
+.sync-icon.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sync-btn-text {
+  white-space: nowrap;
+}
+
+.sync-time {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.7rem;
+  color: var(--fg-muted);
+  opacity: 0.8;
 }
 
 .sync-check-icon {
@@ -2178,26 +2257,5 @@ body {
   stroke-width: 2;
   fill: none;
   flex-shrink: 0;
-}
-
-.sync-info {
-  font-family: 'Outfit', sans-serif;
-  font-size: 0.8rem;
-  color: var(--fg-muted);
-}
-
-.sync-info .syncing {
-  color: var(--accent);
-}
-
-.sync-info .sync-error {
-  color: #ef4444;
-}
-
-.sync-info .synced {
-  color: var(--success);
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
 }
 

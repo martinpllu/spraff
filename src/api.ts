@@ -115,13 +115,13 @@ The user is currently in TEXT MODE - they typed this message and will read your 
 
 ## Tools
 
-You have access to tools that run in the user's browser. To use a tool, respond with ONLY a JSON code block in this format:
+You have access to tools that run in the user's browser. This uses a TEXT-BASED tool calling format (not native function calling). To use a tool, respond with ONLY a JSON code block in this exact format:
 
 \`\`\`tool_call
 {"tool": "tool_name", "args": {...}}
 \`\`\`
 
-When you use a tool, do not include any other text in your response - just the tool call block.
+When you use a tool, do not include any other text in your response - just the tool call block. Do NOT use any native/built-in function calling - only this text format.
 
 ### Available Tools
 
@@ -445,6 +445,9 @@ export async function sendTextToAPI(userText: string): Promise<void> {
   // Start streaming
   streamingContent.value = '';
 
+  const timingStart = performance.now();
+  dbg(`[TIMING] Request start`);
+
   try {
     const response = await fetch(`${OPENROUTER_API_URL}/chat/completions`, {
       method: 'POST',
@@ -469,6 +472,9 @@ export async function sendTextToAPI(userText: string): Promise<void> {
       }),
     });
 
+    const timingResponse = performance.now();
+    dbg(`[TIMING] Response received: ${(timingResponse - timingStart).toFixed(0)}ms`);
+
     if (!response.ok) {
       const error = (await response.json()) as { error?: { message?: string } };
       dbgResponse(reqId, 'error', error.error?.message);
@@ -480,10 +486,16 @@ export async function sendTextToAPI(userText: string): Promise<void> {
     let fullResponse = '';
     let buffer = '';
     let usage = null;
+    let firstChunkTime: number | null = null;
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+
+      if (!firstChunkTime) {
+        firstChunkTime = performance.now();
+        dbg(`[TIMING] First chunk: ${(firstChunkTime - timingStart).toFixed(0)}ms`);
+      }
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
@@ -512,11 +524,20 @@ export async function sendTextToAPI(userText: string): Promise<void> {
               streamingContent.value = '*Searching the web...*';
             }
           }
-        } catch {
-          // Ignore JSON parse errors
+          // Check for Gemini's MALFORMED_FUNCTION_CALL error
+          const nativeReason = (parsed as { choices?: Array<{ native_finish_reason?: string }> })
+            .choices?.[0]?.native_finish_reason;
+          if (nativeReason === 'MALFORMED_FUNCTION_CALL') {
+            dbg('Gemini MALFORMED_FUNCTION_CALL - model confused by tool prompt', 'warn');
+          }
+        } catch (e) {
+          dbg(`SSE parse error: ${e}, data: ${data.slice(0, 200)}`, 'warn');
         }
       }
     }
+
+    const timingEnd = performance.now();
+    dbg(`[TIMING] Stream complete: ${(timingEnd - timingStart).toFixed(0)}ms total`);
 
     const toolCall = parseToolCall(fullResponse);
     if (toolCall && toolCall.tool === 'web_search') {
@@ -548,7 +569,12 @@ export async function sendTextToAPI(userText: string): Promise<void> {
         updateSessionCost(usage.cost);
       }
 
-      addMessage({ role: 'assistant', content: fullResponse });
+      // Only add non-empty responses
+      if (fullResponse.trim()) {
+        addMessage({ role: 'assistant', content: fullResponse });
+      } else {
+        dbg('Skipping empty assistant response', 'warn');
+      }
     }
   } catch (error) {
     dbg(`API error: ${error}`, 'error');

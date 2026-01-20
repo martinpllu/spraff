@@ -13,7 +13,6 @@ import {
 import {
   googleUser,
   isSyncing,
-  syncEnabled,
   lastSyncTime,
   syncError,
 } from '../../state/syncSignals';
@@ -171,9 +170,18 @@ function GoogleIcon() {
   );
 }
 
+function SyncIcon({ spinning = false }: { spinning?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" class={`sync-icon ${spinning ? 'spinning' : ''}`}>
+      <path d="M21 12a9 9 0 0 0-9-9M3 12a9 9 0 0 0 9 9" />
+      <path d="M21 3v6h-6M3 21v-6h6" />
+    </svg>
+  );
+}
+
 export function ChatSidebar() {
   const chatList = chats.value;
-  const { signIn } = useGoogleSync();
+  const { signIn, syncNow } = useGoogleSync();
 
   // Close sidebar when clicking outside on mobile
   const handleOverlayClick = (e: MouseEvent) => {
@@ -235,31 +243,32 @@ export function ChatSidebar() {
               <GoogleIcon />
               <span>Sign in with Google</span>
             </button>
+          ) : syncError.value?.includes('authenticated') ? (
+            // Token expired - need to sign in again
+            <button class="google-signin-btn" onClick={signIn} disabled={isSyncing.value}>
+              <GoogleIcon />
+              <span>Sign in again</span>
+            </button>
           ) : (
             <div class="sync-status">
-              <div class="sync-info">
-                {isSyncing.value ? (
-                  <span class="syncing">Syncing...</span>
-                ) : syncError.value ? (
-                  <span class="sync-error" title={syncError.value}>Sync error</span>
-                ) : lastSyncTime.value ? (
-                  <span class="synced">
-                    <svg viewBox="0 0 24 24" class="sync-check-icon">
-                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                      <polyline points="22 4 12 14.01 9 11.01" />
-                    </svg>
-                    Synced {formatSyncTime(lastSyncTime.value)}
-                  </span>
-                ) : syncEnabled.value ? (
-                  <span class="synced">
-                    <svg viewBox="0 0 24 24" class="sync-check-icon">
-                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                      <polyline points="22 4 12 14.01 9 11.01" />
-                    </svg>
-                    Sync enabled
-                  </span>
-                ) : null}
-              </div>
+              <button
+                class={`sync-btn ${syncError.value ? 'has-error' : ''}`}
+                onClick={syncNow}
+                disabled={isSyncing.value}
+                title={syncError.value || 'Sync now'}
+              >
+                <SyncIcon spinning={isSyncing.value} />
+                <span class="sync-btn-text">
+                  {isSyncing.value
+                    ? 'Syncing...'
+                    : syncError.value
+                      ? 'Retry sync'
+                      : 'Sync'}
+                </span>
+              </button>
+              {lastSyncTime.value && !isSyncing.value && !syncError.value && (
+                <span class="sync-time">{formatSyncTime(lastSyncTime.value)}</span>
+              )}
             </div>
           )}
         </footer>

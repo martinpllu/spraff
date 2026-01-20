@@ -62,15 +62,6 @@ function loadCurrentChatId(): string | null {
   }
 }
 
-function loadMessages(): Message[] {
-  try {
-    const saved = localStorage.getItem('conversationHistory');
-    return saved ? (JSON.parse(saved) as Message[]) : [];
-  } catch {
-    return [];
-  }
-}
-
 // ============ API & Auth ============
 
 export const apiKey = signal<string | null>(localStorage.getItem('openrouter_api_key'));
@@ -81,6 +72,9 @@ export const chats = signal<Chat[]>(loadChats());
 export const currentChatId = signal<string | null>(loadCurrentChatId());
 export const sidebarOpen = signal(false);
 
+// Draft messages for new chats (before they're saved to chats array)
+const draftMessages = signal<Message[]>([]);
+
 export const currentChat = computed(() => {
   if (!currentChatId.value) return null;
   return chats.value.find((c) => c.id === currentChatId.value) || null;
@@ -88,9 +82,14 @@ export const currentChat = computed(() => {
 
 // ============ Conversation ============
 
-export const messages = signal<Message[]>(
-  currentChat.value?.messages || loadMessages()
-);
+// Messages is now computed - derives from currentChat or draftMessages
+export const messages = computed(() => {
+  if (currentChatId.value) {
+    return currentChat.value?.messages ?? [];
+  }
+  return draftMessages.value;
+});
+
 export const messageCount = computed(() => messages.value.length);
 
 // ============ Recording ============
@@ -231,25 +230,25 @@ effect(() => {
 // ============ Actions ============
 
 export function addMessage(message: Message): void {
-  const newMessages = [...messages.value, message];
-  messages.value = newMessages;
-
-  // Update current chat or create new one
   const now = Date.now();
+
   if (currentChatId.value) {
-    // Update existing chat
-    chats.value = chats.value.map((c) =>
-      c.id === currentChatId.value
-        ? {
-            ...c,
-            messages: newMessages,
-            title: c.title === 'New Chat' ? generateTitle(newMessages) : c.title,
-            updatedAt: now,
-          }
-        : c
-    );
+    // Update existing chat - this will automatically update `messages` computed
+    chats.value = chats.value.map((c) => {
+      if (c.id !== currentChatId.value) return c;
+      const newMessages = [...c.messages, message];
+      return {
+        ...c,
+        messages: newMessages,
+        title: c.title === 'New Chat' ? generateTitle(newMessages) : c.title,
+        updatedAt: now,
+      };
+    });
   } else {
-    // Create new chat with first message
+    // New chat - add to draft first, then create chat
+    const newMessages = [...draftMessages.value, message];
+
+    // Create new chat immediately
     const newChat: Chat = {
       id: generateId(),
       title: generateTitle(newMessages),
@@ -259,16 +258,21 @@ export function addMessage(message: Message): void {
     };
     chats.value = [newChat, ...chats.value];
     currentChatId.value = newChat.id;
+
+    // Clear draft
+    draftMessages.value = [];
   }
 }
 
 export function clearMessages(): void {
-  messages.value = [];
-  // Update current chat if exists
   if (currentChatId.value) {
+    // Clear messages in current chat
     chats.value = chats.value.map((c) =>
       c.id === currentChatId.value ? { ...c, messages: [], updatedAt: Date.now() } : c
     );
+  } else {
+    // Clear draft messages
+    draftMessages.value = [];
   }
   localStorage.removeItem('conversationHistory');
 }
@@ -337,7 +341,7 @@ export function getPendingVoiceMessage(): string | null {
 // ============ Chat Management ============
 
 export function createNewChat(): void {
-  messages.value = [];
+  draftMessages.value = [];
   currentChatId.value = null;
   sidebarOpen.value = false;
 }
@@ -346,7 +350,7 @@ export function selectChat(chatId: string): void {
   const chat = chats.value.find((c) => c.id === chatId);
   if (chat) {
     currentChatId.value = chatId;
-    messages.value = chat.messages;
+    // No need to copy messages - computed signal handles it automatically
     sidebarOpen.value = false;
   }
 }
@@ -357,7 +361,7 @@ export function deleteChat(chatId: string): void {
   // If we deleted the current chat, start fresh
   if (currentChatId.value === chatId) {
     currentChatId.value = null;
-    messages.value = [];
+    draftMessages.value = [];
   }
 }
 
