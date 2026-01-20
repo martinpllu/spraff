@@ -1,14 +1,7 @@
 import { ModeToggle } from '../controls/ModeToggle';
-import { isSpeaking, isListening, isTextMode, createNewChat } from '../../state/signals';
-import { useSpeech } from '../../hooks/useSpeech';
+import { createNewChat } from '../../state/signals';
 
-interface Props {
-  onCancel: () => void;
-}
-
-export function BottomBar({ onCancel }: Props) {
-  const { stopSpeaking } = useSpeech();
-
+export function BottomBar() {
   const handleNewChat = (e: Event) => {
     const button = e.currentTarget as HTMLElement;
     button.classList.add('clicked');
@@ -25,25 +18,6 @@ export function BottomBar({ onCancel }: Props) {
     <div class="bottom-bar">
       <div class="bottom-bar-left">
         <ModeToggle />
-      </div>
-      <div class="bottom-bar-center">
-        {isSpeaking.value && (
-          <button class="action-btn" onClick={stopSpeaking}>
-            <svg viewBox="0 0 24 24">
-              <rect x="6" y="6" width="12" height="12" rx="1" />
-            </svg>
-            <span>Stop</span>
-          </button>
-        )}
-        {isListening.value && (
-          <button class="action-btn" onClick={onCancel}>
-            <svg viewBox="0 0 24 24">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-            <span>Cancel</span>
-          </button>
-        )}
       </div>
       <div class="bottom-bar-right">
         <button class="new-chat-btn-voice" onClick={handleNewChat}>

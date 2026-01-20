@@ -4,7 +4,7 @@ import { useSignal } from '@preact/signals';
 import {
   isListening,
   recordingCancelled,
-  buttonState,
+  setButtonState,
   savePendingVoiceMessage,
   clearPendingVoiceMessage,
 } from '../state/signals';
@@ -18,6 +18,7 @@ export function useAudio() {
   async function startRecording(): Promise<void> {
     try {
       audioChunks.value = [];
+      recordingCancelled.value = false;
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         dbg('mediaDevices API not available', 'error');
@@ -83,11 +84,11 @@ export function useAudio() {
 
       recorder.start();
       isListening.value = true;
-      buttonState.value = 'listening';
+      setButtonState('listening', 'startRecording');
       dbg('Recording started');
     } catch (error) {
       dbg(`Microphone error: ${error}`, 'error');
-      buttonState.value = 'ready';
+      setButtonState('ready', 'startRecording-error');
       throw error;
     }
   }
@@ -97,7 +98,7 @@ export function useAudio() {
       const recorder = mediaRecorder.value;
       if (!recorder || recorder.state === 'inactive') {
         isListening.value = false;
-        buttonState.value = 'processing';
+        setButtonState('uploading', 'stopRecording-noRecorder');
         resolve(null);
         return;
       }
@@ -108,7 +109,7 @@ export function useAudio() {
 
         if (recordingCancelled.value) {
           recordingCancelled.value = false;
-          buttonState.value = 'ready';
+          setButtonState('ready', 'stopRecording-cancelled');
           resolve(null);
           return;
         }
@@ -121,7 +122,7 @@ export function useAudio() {
       recorder.stop();
       dbg('Recording stopped');
       isListening.value = false;
-      buttonState.value = 'processing';
+      setButtonState('uploading', 'stopRecording');
     });
   }
 
@@ -132,7 +133,7 @@ export function useAudio() {
       recorder.stop();
     }
     isListening.value = false;
-    buttonState.value = 'ready';
+    setButtonState('ready', 'cancelRecording');
     dbg('Recording cancelled');
   }
 

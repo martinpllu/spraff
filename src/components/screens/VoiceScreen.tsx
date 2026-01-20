@@ -15,6 +15,7 @@ import { useAudio, blobToBase64, convertToWav } from '../../hooks/useAudio';
 import {
   isTextMode,
   buttonState,
+  setButtonState,
   shouldStopSpeaking,
   setLastVoiceSize,
   currentChat,
@@ -99,7 +100,7 @@ export function VoiceScreen({
       await sendAudioToAPI(base64Audio);
     } catch (error) {
       dbg(`Failed to send audio: ${error}`, 'error');
-      buttonState.value = 'ready';
+      setButtonState('ready');
     }
   };
 
@@ -127,15 +128,9 @@ export function VoiceScreen({
 
       <TextInput />
 
-      <MainButton onPress={handlePress} onRelease={handleRelease} chatTitle={chatTitle} />
+      <MainButton onPress={handlePress} onRelease={handleRelease} onCancel={handleCancel} chatTitle={chatTitle} />
 
-      {!isTextMode.value && (
-        <div class="hint-text">
-          Tap or <kbd>Space</kbd> to speak
-        </div>
-      )}
-
-      <BottomBar onCancel={handleCancel} />
+      <BottomBar />
 
       {/* Modals */}
       <VoiceSettings isOpen={showVoice} />

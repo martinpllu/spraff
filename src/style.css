@@ -386,16 +386,20 @@ body {
   display: block;
 }
 
+.main-button.uploading,
 .main-button.processing {
   opacity: 0.9;
   cursor: wait;
 }
 
+.main-button.uploading .mic-icon,
+.main-button.uploading .stop-icon,
 .main-button.processing .mic-icon,
 .main-button.processing .stop-icon {
   display: none;
 }
 
+.main-button.uploading .spinner-icon,
 .main-button.processing .spinner-icon {
   display: block;
 }
@@ -429,9 +433,14 @@ body {
 /* Status Text */
 .status-text {
   position: absolute;
-  bottom: -55px;
+  top: calc(100% + 36px);
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
   font-family: 'Bricolage Grotesque', sans-serif;
   font-size: 0.85rem;
   font-weight: 700;
@@ -442,12 +451,50 @@ body {
   transition: all 0.3s ease;
 }
 
+.status-text kbd {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  margin: 0 0.15rem;
+  box-shadow: var(--shadow-sm);
+  text-transform: none;
+}
+
 .status-text.listening {
   color: var(--secondary);
 }
 
 .status-text.speaking {
   color: var(--secondary);
+}
+
+.status-stop-btn {
+  padding: 5px 14px;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.status-stop-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--fg-muted);
+}
+
+.status-stop-btn:active {
+  transform: scale(0.95);
 }
 
 /* Current chat title in voice mode */
@@ -524,37 +571,6 @@ body {
   background: var(--surface) !important;
 }
 
-/* Hint text below button */
-.hint-text {
-  position: fixed;
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: 'Outfit', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--fg-muted);
-  opacity: 0.7;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.hint-text.hidden {
-  opacity: 0;
-}
-
-.hint-text kbd {
-  display: inline-block;
-  padding: 0.25rem 0.6rem;
-  font-family: 'Bricolage Grotesque', sans-serif;
-  font-size: 0.8rem;
-  font-weight: 700;
-  background: var(--surface);
-  border: 2px solid var(--border);
-  border-radius: 8px;
-  margin: 0 0.2rem;
-  box-shadow: var(--shadow-sm);
-}
-
 /* Top Menu */
 .top-menu {
   position: fixed;
@@ -607,13 +623,12 @@ body {
   left: 50%;
   transform: translateX(-50%);
   display: grid;
-  grid-template-columns: auto auto auto;
+  grid-template-columns: auto auto;
   gap: 12px;
   z-index: 50;
 }
 
 .bottom-bar-left,
-.bottom-bar-center,
 .bottom-bar-right {
   display: flex;
   align-items: center;
@@ -1609,13 +1624,6 @@ body {
   stroke: white;
 }
 
-/* Text mode adjustments */
-.voice-screen.text-mode .hint-text {
-  opacity: 0;
-  transform: translateX(-50%) translateX(-30%);
-  pointer-events: none;
-}
-
 /* Ensure cost and menu float above conversation */
 .cost-display {
   z-index: 100;
@@ -1632,10 +1640,6 @@ body {
   .main-button svg {
     width: 72px;
     height: 72px;
-  }
-
-  .hint-text {
-    display: none;
   }
 
   .bottom-bar {

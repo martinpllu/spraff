@@ -6,7 +6,7 @@ import { render } from 'preact';
 import { App } from './components/App';
 import { dbg, initDebug } from './debug';
 import { BUILD_ID } from './build-id';
-import { isMobile, apiKey, buttonState, isListening, isSpeaking, isProcessingText } from './state/signals';
+import { isMobile, apiKey, isListening, isSpeaking, isProcessingText, setButtonState } from './state/signals';
 import { getPendingVoiceMessage, clearPendingVoiceMessage } from './state/signals';
 import { sendAudioToAPI } from './api';
 
@@ -30,14 +30,14 @@ async function checkPendingVoiceMessage(): Promise<void> {
     const sizeKB = Math.round((pendingAudio.length * 0.75) / 1024);
     dbg(`Found pending voice message: ${sizeKB} KB`);
     // Auto-retry the upload
-    buttonState.value = 'processing';
+    setButtonState('uploading');
 
     try {
       await sendAudioToAPI(pendingAudio);
       clearPendingVoiceMessage();
     } catch (e) {
       dbg(`Failed to retry pending voice message: ${e}`, 'error');
-      buttonState.value = 'ready';
+      setButtonState('ready');
     }
   }
 }

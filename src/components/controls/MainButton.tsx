@@ -1,12 +1,14 @@
 import { buttonState, isTextMode } from '../../state/signals';
+import { useSpeech } from '../../hooks/useSpeech';
 
 interface Props {
   onPress: () => void;
   onRelease: () => void;
+  onCancel: () => void;
   chatTitle?: string;
 }
 
-export function MainButton({ onPress, onRelease, chatTitle }: Props) {
+export function MainButton({ onPress, onRelease, onCancel, chatTitle }: Props) {
   const state = buttonState.value;
 
   // Don't show in text mode
@@ -14,9 +16,11 @@ export function MainButton({ onPress, onRelease, chatTitle }: Props) {
 
   const handleClick = (e: Event) => {
     e.preventDefault();
-    if (state === 'ready') {
+    // Read current state directly from signal to avoid stale closure
+    const currentState = buttonState.value;
+    if (currentState === 'ready') {
       onPress();
-    } else if (state === 'listening') {
+    } else if (currentState === 'listening') {
       onRelease();
     }
   };
@@ -39,24 +43,67 @@ export function MainButton({ onPress, onRelease, chatTitle }: Props) {
         </svg>
         <div class="spinner-icon" />
       </button>
-      <StatusText />
+      <StatusText onCancel={onCancel} />
     </div>
   );
 }
 
-function StatusText() {
+function StatusText({ onCancel }: { onCancel: () => void }) {
   const state = buttonState.value;
+  const { stopSpeaking } = useSpeech();
 
-  const statusMap: Record<typeof state, string> = {
-    ready: 'Ready',
-    listening: 'Listening',
-    processing: 'Thinking',
-    speaking: 'Speaking',
-  };
+  // Check if on desktop (not touch device)
+  const isDesktop = !('ontouchstart' in window);
 
-  return (
-    <div class={`status-text ${state === 'listening' || state === 'speaking' ? state : ''}`}>
-      {statusMap[state]}
-    </div>
-  );
+  if (state === 'ready') {
+    return (
+      <div class="status-text">
+        <span>
+          {isDesktop ? (
+            <>Tap or <kbd>Space</kbd> to speak</>
+          ) : (
+            'Tap to speak'
+          )}
+        </span>
+      </div>
+    );
+  }
+
+  if (state === 'listening') {
+    return (
+      <div class="status-text listening">
+        <span>Tap to send</span>
+        <button class="status-stop-btn" onClick={onCancel}>Cancel</button>
+      </div>
+    );
+  }
+
+  if (state === 'uploading') {
+    return (
+      <div class="status-text">
+        <span>Uploading</span>
+        <button class="status-stop-btn" onClick={stopSpeaking}>Cancel</button>
+      </div>
+    );
+  }
+
+  if (state === 'processing') {
+    return (
+      <div class="status-text">
+        <span>Thinking</span>
+        <button class="status-stop-btn" onClick={stopSpeaking}>Cancel</button>
+      </div>
+    );
+  }
+
+  if (state === 'speaking') {
+    return (
+      <div class="status-text speaking">
+        <span>Speaking</span>
+        <button class="status-stop-btn" onClick={stopSpeaking}>Stop</button>
+      </div>
+    );
+  }
+
+  return null;
 }

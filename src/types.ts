@@ -36,7 +36,7 @@ export interface StreamResult {
   usage: APIUsage | null;
 }
 
-export type ButtonState = 'ready' | 'listening' | 'processing' | 'speaking';
+export type ButtonState = 'ready' | 'listening' | 'uploading' | 'processing' | 'speaking';
 
 export type DebugLevel = 'log' | 'warn' | 'error';
 

@@ -106,9 +106,44 @@ export const speechQueue = signal<string[]>([]);
 export const speechTotalChars = signal(0);
 export const speechSpokenChars = signal(0);
 
-// ============ UI ============
+// ============ UI State Machine ============
 
 export const buttonState = signal<ButtonState>('ready');
+
+// Valid state transitions:
+// ready -> listening (user starts recording)
+// ready -> uploading (retrying pending audio)
+// listening -> uploading (user stops recording to send)
+// listening -> ready (user cancels recording)
+// uploading -> processing (upload complete, waiting for AI)
+// uploading -> ready (user cancels or error)
+// processing -> speaking (AI response ready)
+// processing -> ready (user cancels or error)
+// speaking -> ready (speech finished or user stops)
+
+const validTransitions: Record<ButtonState, ButtonState[]> = {
+  ready: ['listening', 'uploading'],
+  listening: ['uploading', 'ready'],
+  uploading: ['processing', 'ready'],
+  processing: ['speaking', 'ready'],
+  speaking: ['ready'],
+};
+
+export function setButtonState(newState: ButtonState, source?: string): boolean {
+  const current = buttonState.value;
+  if (current === newState) return true; // No-op is fine
+
+  const info = source ? ` (from ${source})` : '';
+
+  if (validTransitions[current]?.includes(newState)) {
+    console.log(`State: ${current} -> ${newState}${info}`);
+    buttonState.value = newState;
+    return true;
+  }
+
+  console.warn(`INVALID state transition: ${current} -> ${newState}${info}`);
+  return false;
+}
 export const isTextMode = signal(localStorage.getItem('textMode') === 'true');
 export const isProcessingText = signal(false);
 export const currentScreen = signal<'login' | 'voice'>(

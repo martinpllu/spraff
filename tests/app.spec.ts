@@ -51,15 +51,17 @@ test.describe('Spraff App', () => {
       await expect(mainButton).not.toHaveClass(/listening/);
       await expect(mainButton).not.toHaveClass(/processing/);
 
-      await expect(page.locator('.status-text')).toHaveText('Ready');
+      // Status text shows "Tap or Space to speak" on desktop
+      await expect(page.locator('.status-text')).toContainText('Tap');
+      await expect(page.locator('.status-text')).toContainText('to speak');
     });
 
-    test('shows hint text', async ({ page }) => {
-      const hint = page.locator('.hint-text');
-      await expect(hint).toBeVisible();
-      await expect(hint).toContainText('Tap or');
-      await expect(hint).toContainText('Space');
-      await expect(hint).toContainText('to speak');
+    test('shows status text with keyboard hint on desktop', async ({ page }) => {
+      const statusText = page.locator('.status-text');
+      await expect(statusText).toBeVisible();
+      await expect(statusText).toContainText('Tap or');
+      await expect(statusText).toContainText('Space');
+      await expect(statusText).toContainText('to speak');
     });
 
     test('shows mode toggle with voice mode active by default', async ({ page }) => {
@@ -292,10 +294,11 @@ test.describe('Spraff App', () => {
       await expect(newBtn).toContainText('New');
     });
 
-    test('hides New button in text mode', async ({ page }) => {
+    test('shows New button in text mode too', async ({ page }) => {
       // Switch to text mode
       await page.locator('.mode-toggle').click();
-      await expect(page.locator('.new-chat-btn-voice')).not.toBeVisible();
+      // New button is visible in both modes
+      await expect(page.locator('.new-chat-btn-voice')).toBeVisible();
     });
 
     test('New button creates new chat', async ({ page }) => {
@@ -324,17 +327,11 @@ test.describe('Spraff App', () => {
       await expect(page.locator('.current-chat-title')).toHaveText('New Chat');
     });
 
-    test('Cancel button appears during recording and resets state', async ({ page }) => {
-      // Initial state - no Cancel button in center slot
-      await expect(page.locator('.bottom-bar-center .action-btn')).not.toBeVisible();
-      await expect(page.locator('.status-text')).toHaveText('Ready');
-
-      // Simulate listening state by setting signal values directly
-      await page.evaluate(() => {
-        // Access the signals from the window (they should be available via module scope)
-        const event = new CustomEvent('test-set-listening', { detail: true });
-        window.dispatchEvent(event);
-      });
+    test('Stop button appears in status text during recording', async ({ page }) => {
+      // Initial state - status text shows "Tap to speak" and no stop button
+      await expect(page.locator('.status-text')).toContainText('Tap');
+      await expect(page.locator('.status-text')).toContainText('to speak');
+      await expect(page.locator('.status-stop-btn')).not.toBeVisible();
 
       // Start recording by triggering mousedown on main button
       // This requires microphone permission which may not be available in CI
@@ -344,13 +341,12 @@ test.describe('Spraff App', () => {
       await expect(mainButton).toHaveClass(/ready/);
     });
 
-    test('bottom bar has three slots with equal spacing', async ({ page }) => {
+    test('bottom bar has toggle and new button', async ({ page }) => {
       const bottomBar = page.locator('.bottom-bar');
       await expect(bottomBar).toBeVisible();
 
-      // Check all three slots exist
+      // Check both slots exist
       await expect(page.locator('.bottom-bar-left')).toBeVisible();
-      await expect(page.locator('.bottom-bar-center')).toBeVisible();
       await expect(page.locator('.bottom-bar-right')).toBeVisible();
 
       // Mode toggle in left slot

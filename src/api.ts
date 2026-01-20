@@ -9,7 +9,7 @@ import {
   addMessage,
   updateSessionCost,
   setLastVoiceSize,
-  buttonState,
+  setButtonState,
   shouldStopSpeaking,
   speechQueue,
   selectedVoiceName,
@@ -285,6 +285,9 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
       body: requestBody,
     });
 
+    // Upload complete, now waiting for response (thinking)
+    setButtonState('processing');
+
     if (!response.ok) {
       const error = (await response.json()) as { error?: { message?: string } };
       dbgResponse(reqId, 'error', error.error?.message);
@@ -353,13 +356,13 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
       if (!userTranscript) {
         dbgResponse(reqId, 'error', 'Web search requested but no transcript');
         showError('Could not process voice search request');
-        buttonState.value = 'ready';
+        setButtonState('ready');
         return;
       }
 
       dbgResponse(reqId, 'tool_call', 'web_search');
 
-      buttonState.value = 'speaking';
+      setButtonState('speaking');
 
       await new Promise<void>((resolve) => {
         const utterance = new SpeechSynthesisUtterance('Searching the web, please wait.');
@@ -385,7 +388,7 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
           updateSessionCost(searchResult.usage.cost);
         }
 
-        buttonState.value = 'speaking';
+        setButtonState('speaking');
 
         const sentences = searchResult.fullResponse.match(/[^.!?]+[.!?]+/g) || [
           searchResult.fullResponse,
@@ -399,12 +402,12 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
       } catch (searchError) {
         dbg(`Web search error: ${searchError}`, 'error');
         showError('Web search failed: ' + String(searchError));
-        buttonState.value = 'ready';
+        setButtonState('ready');
       }
     } else {
       dbgResponse(reqId, 'normal', `${responseOnly.length} chars`);
 
-      buttonState.value = 'speaking';
+      setButtonState('speaking');
 
       const sentences = responseOnly.match(/[^.!?]+[.!?]+/g) || [responseOnly];
       for (let i = 0; i < sentences.length; i++) {
@@ -421,7 +424,7 @@ export async function sendAudioToAPI(base64Audio: string): Promise<void> {
   } catch (error) {
     dbg(`API error: ${error}`, 'error');
     showError(String(error));
-    buttonState.value = 'ready';
+    setButtonState('ready');
   }
 }
 

@@ -7,7 +7,7 @@ import {
   speechTotalChars,
   speechSpokenChars,
   selectedVoiceName,
-  buttonState,
+  setButtonState,
 } from './state/signals';
 
 // Recommended voices - high quality on-device voices
@@ -146,7 +146,7 @@ export function processQueue(): void {
   if (shouldStopSpeaking.value || queue.length === 0) {
     isSpeaking.value = false;
     if (queue.length === 0) {
-      buttonState.value = 'ready';
+      setButtonState('ready');
     }
     return;
   }
@@ -213,5 +213,5 @@ export function stopSpeaking(): void {
   speechQueue.value = [];
   speechSynthesis.cancel();
   isSpeaking.value = false;
-  buttonState.value = 'ready';
+  setButtonState('ready');
 }
